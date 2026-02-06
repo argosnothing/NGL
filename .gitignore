@@ -2,9 +2,6 @@
 /target
 Cargo.lock
 
-# Github stuff
-.github
-
 # Nix
 result
 .direnv
