@@ -10,7 +10,7 @@ Noogle page on a function would end up being indexed as a function, with the pag
 It would also index each example for that function that is in that same page. This concept extends to *guides* as well, which
 themselves can potentially contain documentation on a *function* if the provider is capable of consistently separating out function documentation.
 
-## Provider are bespoke.
+## Providers are bespoke.
 Good nix documentation is spread out in different formats, different sites, different apis, a provider is a module in NGL that manages those sources, this includes all logic
 that takes that documentation and atomizes it in a way the NGL can index and make sense of, in any method possible. If a provider fails to update the db when it needs to update, it should
 do so in a way that lets the rest of the application function.
