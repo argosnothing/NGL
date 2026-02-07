@@ -1,7 +1,7 @@
 # Notes, Concepts
 
 ## Purpose
-NGL is first, and formost, for aggregating *documentation* on *kinds* of data. Very important to focus on this.  
+NGL is first, and foremost, for aggregating *documentation* on *kinds* of data. Very important to focus on this.  
 *Functions* in NGL are not meant to represent a function in the sense of a signature to that function, but losely documentation about a function.
 This means a *function* kind can include documentation that also has examples, and even options if that is in its documentation.
 
