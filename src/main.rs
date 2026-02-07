@@ -1,3 +1,7 @@
 mod providers;
 mod schema;
-fn main() {}
+
+#[tokio::main]
+async fn main() {
+    println!("Wow, async rust time... yippy");
+}
