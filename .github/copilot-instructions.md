@@ -81,7 +81,8 @@ Different categories of Nix knowledge:
 - Goal: Adding/removing/breaking providers doesn't impact consumer code
 
 ### Provider Requirements
-- Must provide API endpoints (no web scraping)
+- Must provide API endpoints or structured data via API (avoid HTML scraping)
+- Markdown via API is acceptable (e.g., GitHub raw content)
 - Each provider will need custom logic for its response structure
 - Only API-accessible data sources are candidates
 
@@ -92,37 +93,62 @@ Different categories of Nix knowledge:
 - Track metadata: provider, kind, last_updated
 
 ### Response Format
-List of provider results in **normalized NGL schema**:
+
+**Structure:**
+```rust
+pub struct NGLResponse {
+    pub provider: String,
+    pub matches: Vec<Match>,
+}
+
+pub struct Match {
+    pub kind: DataKind,
+    pub data: MatchData, // kind-specific structured data
+}
 ```
+
+**Example response:**
+```json
 [
   {
     "provider": "noogle",
-    "data": {
-      "Guide": null,
-      "Example Code": "...",
-      "Options": null,
-      // ... other NGL schema fields
-    }
+    "matches": [
+      {
+        "kind": "Function",
+        "data": { /* function-specific fields */ }
+      }
+    ]
   },
   {
-    "provider": "another-provider", 
-    "data": {
-      "Guide": "...",
-      "Example Code": null,
-      "Options": [...],
-      // ... other NGL schema fields
-    }
+    "provider": "nixos-org-manual",
+    "matches": [
+      {
+        "kind": "Guide",
+        "data": { 
+          "title": "darwin.linux-builder",
+          "content": "...",
+          "embedded_examples": [...]
+        }
+      }
+    ]
   }
 ]
 ```
 
-**Key principle**: Provider-agnostic format. Each provider transforms its response into NGL's standardized schema. Consumers never see provider-specific structures.
+**Key principles:**
+- One `NGLResponse` per provider
+- Each response contains multiple `matches` (results from that provider)
+- Each match has a `kind` (Function, Guide, ConfigOption, etc.) and kind-specific `data`
+- **No data duplication**: Examples embedded in guides stay part of guide data (placement matters)
+- Consumers interact with standardized Match structure, not provider-specific formats
 
-**NGL Schema**: To be defined. Will include fields like:
-- Guide (documentation/tutorials)
-- Example Code (usage examples)
-- Options (configuration options)
-- (others TBD based on provider evaluation)
+**DataKind categories:**
+- **Function**: Nix language functions with signatures, descriptions
+- **Type**: Type definitions
+- **ConfigOption**: NixOS/Home Manager configuration options
+- **Guide**: Documentation/tutorials with embedded examples
+- **Package**: Package information and metadata
+- **Example**: Standalone code examples (not part of guides)
 
 ## Technology Stack
 
