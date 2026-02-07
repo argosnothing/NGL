@@ -13,11 +13,19 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::example::Entity")]
     Examples,
+    #[sea_orm(has_many = "super::function::Entity")]
+    Functions,
 }
 
 impl Related<super::example::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Examples.def()
+    }
+}
+
+impl Related<super::function::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Functions.def()
     }
 }
 

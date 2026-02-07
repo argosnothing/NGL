@@ -6,7 +6,6 @@ pub struct Migration;
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        // Create providers table
         manager
             .create_table(
                 Table::create()
@@ -27,7 +26,6 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
-        // Create examples table
         manager
             .create_table(
                 Table::create()
@@ -44,11 +42,32 @@ impl MigrationTrait for Migration {
                     )
                     .to_owned(),
             )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(Function::Table)
+                    .if_not_exists()
+                    .col(pk_auto(Function::Id))
+                    .col(string(Function::ProviderName))
+                    .col(string(Function::Data))
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk-function-provider")
+                            .from(Function::Table, Function::ProviderName)
+                            .to(Provider::Table, Provider::Name),
+                    )
+                    .to_owned(),
+            )
             .await
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        // Drop in reverse order (examples first due to foreign key)
+        manager
+            .drop_table(Table::drop().table(Function::Table).to_owned())
+            .await?;
+
         manager
             .drop_table(Table::drop().table(Example::Table).to_owned())
             .await?;
@@ -60,6 +79,7 @@ impl MigrationTrait for Migration {
 }
 
 #[derive(DeriveIden)]
+#[sea_orm(iden = "providers")]
 enum Provider {
     Table,
     Name,
@@ -67,7 +87,17 @@ enum Provider {
 }
 
 #[derive(DeriveIden)]
+#[sea_orm(iden = "examples")]
 enum Example {
+    Table,
+    Id,
+    ProviderName,
+    Data,
+}
+
+#[derive(DeriveIden)]
+#[sea_orm(iden = "functions")]
+enum Function {
     Table,
     Id,
     ProviderName,
