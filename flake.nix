@@ -43,6 +43,9 @@
             # SQLite for rusqlite
             sqlite
 
+            # We love seaORM!
+            sea-orm-cli
+
             # OpenSSL for reqwest
             openssl
             pkg-config
@@ -51,6 +54,8 @@
           RUST_SRC_PATH = "${rustToolchain}/lib/rustlib/src/rust/library";
 
           shellHook = ''
+            export DATABASE_URL="sqlite://ngl.db?mode=rwc"
+
             echo "NGL development environment"
             echo "Rust version: $(rustc --version)"
           '';
