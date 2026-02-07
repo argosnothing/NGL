@@ -1,1 +1,2 @@
-pub mod noogle;
+mod noogle;
+mod schema;

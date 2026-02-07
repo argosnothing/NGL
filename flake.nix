@@ -10,14 +10,24 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, rust-overlay }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+      rust-overlay,
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
       let
         overlays = [ (import rust-overlay) ];
         pkgs = import nixpkgs { inherit system overlays; };
-        
+
         rustToolchain = pkgs.rust-bin.stable.latest.default.override {
-          extensions = [ "rust-src" "rust-analyzer" ];
+          extensions = [
+            "rust-src"
+            "rust-analyzer"
+          ];
         };
       in
       {
@@ -29,17 +39,17 @@
             rust-analyzer
             rustfmt
             clippy
-            
+
             # SQLite for rusqlite
             sqlite
-            
+
             # OpenSSL for reqwest
             openssl
             pkg-config
           ];
 
           RUST_SRC_PATH = "${rustToolchain}/lib/rustlib/src/rust/library";
-          
+
           shellHook = ''
             echo "NGL development environment"
             echo "Rust version: $(rustc --version)"
