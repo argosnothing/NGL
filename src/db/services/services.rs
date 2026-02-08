@@ -97,7 +97,7 @@ async fn query_examples_table(
         .map(|m| NGLData {
             data: NGLDataVariant::Example(ExampleData {
                 code: m.data,
-                language: Some(m.language.to_string()),
+                language: m.language.map(|lang| lang.to_string()),
             }),
         })
         .collect();
