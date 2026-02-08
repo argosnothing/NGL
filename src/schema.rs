@@ -7,6 +7,7 @@ pub struct NGLRequest {
     pub kinds: Option<Vec<NGLDataKind>>,
 }
 
+/// The data coming back from the crate
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NGLResponse {
     pub provider_name: String,
@@ -39,14 +40,25 @@ pub struct FunctionData {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExampleData {
+    /// Code block parsed as plaintext with formatting preserved
     pub code: String,
+    /// Language of the code block to give to the caller
     pub language: Option<String>,
-    pub description: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GuideData {
+    /// The name of this guide, captured through either
+    /// url route convention or by a header the provider
+    /// can reliable connect with a guide's title.
+    /// This is likely what i'll use initially for querying
+    /// guides, at least till we get fts5 impl
     pub title: String,
+    /// An entire guide
+    /// For now, and for simplicity
+    /// Guide will carry with them their own formatting
+    /// In this case markdown, and it's up to the caller
+    /// to parse this string in a way that works for display.
     pub content: String,
 }
 
