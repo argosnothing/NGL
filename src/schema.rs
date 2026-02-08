@@ -16,7 +16,6 @@ pub struct NGLResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NGLData {
-    pub kind: NGLDataKind,
     pub data: NGLDataVariant,
 }
 
@@ -32,10 +31,12 @@ pub enum NGLDataVariant {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FunctionData {
+    /// The name of the function.
     pub name: String,
     pub signature: Option<String>,
-    pub description: Option<String>,
-    pub examples: Vec<String>,
+    /// This is the body of the documentation
+    /// Examples will likely be nested in here
+    pub content: NGLRaw,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -53,13 +54,13 @@ pub struct GuideData {
     /// can reliable connect with a guide's title.
     /// This is likely what i'll use initially for querying
     /// guides, at least till we get fts5 impl
-    pub title: String,
+    pub title: NGLRaw,
     /// An entire guide
     /// For now, and for simplicity
     /// Guide will carry with them their own formatting
     /// In this case markdown, and it's up to the caller
     /// to parse this string in a way that works for display.
-    pub content: String,
+    pub content: NGLRaw,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -92,4 +93,35 @@ pub enum NGLDataKind {
     Option,
     Package,
     Type,
+}
+
+// Specifies format for the content
+// This is because multipart documentation often has formatting
+// embedded into the data, for example markdown
+// as # To show headings, where's HTML will have <h1>text</h1>
+// NGL's job isn't to provide sophisticated parsing of this data
+// it simply needs to organize data from the sources.
+// With the exception of examples, as these are strictly code blocks
+// and don't need the same considerations.
+// It's important to understand that it's possible for datatypes to nest other types
+// this separation just makes it easier for the consumer to see the primary format of the text
+// without analysis.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum NGLRaw {
+    Markdown(String),
+    HTML(String),
+    PlainText(String),
+}
+
+impl NGLDataVariant {
+    pub fn kind(&self) -> NGLDataKind {
+        match self {
+            NGLDataVariant::Function(_) => NGLDataKind::Function,
+            NGLDataVariant::Example(_) => NGLDataKind::Example,
+            NGLDataVariant::Guide(_) => NGLDataKind::Guide,
+            NGLDataVariant::Option(_) => NGLDataKind::Option,
+            NGLDataVariant::Package(_) => todo!(),
+            NGLDataVariant::Type(_) => NGLDataKind::Type,
+        }
+    }
 }

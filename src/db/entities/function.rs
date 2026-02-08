@@ -1,11 +1,14 @@
 use sea_orm::entity::prelude::*;
 
+use crate::db::enums::documentation_format::DocumentationFormat;
+
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "functions")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
 
+    pub format: DocumentationFormat,
     pub provider_name: String,
     pub data: String,
 }

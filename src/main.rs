@@ -15,7 +15,10 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Database connected!");
 
+    let i = 3;
     let _response = Noogle::pull_data().await;
+    let p = _response;
+    let o = &i;
 
     Ok(())
 }

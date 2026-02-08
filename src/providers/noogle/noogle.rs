@@ -1,8 +1,5 @@
-use chrono::{Date, DateTime, Local, NaiveDate, TimeZone};
-use sea_orm::prelude::TimeDateTimeWithTimeZone;
-
 use super::schema::NoogleResponse;
-use crate::providers::Provider;
+use crate::providers::{Provider, noogle::schema::Doc};
 
 pub struct Noogle {}
 static ENDPOINT_URL: &str = "https://noogle.dev/api/v1/data";
@@ -41,7 +38,6 @@ impl Provider for Noogle {
             );
         }
 
-        let _placeholder = ();
         unreachable!()
     }
 

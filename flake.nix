@@ -32,6 +32,9 @@
       in
       {
         devShells.default = pkgs.mkShell {
+          packages = with pkgs; [
+            visidata
+          ];
           buildInputs = with pkgs; [
             rustToolchain
             cargo

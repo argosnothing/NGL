@@ -1,12 +1,15 @@
 use sea_orm::entity::prelude::*;
 
+use crate::db::enums::language::Language;
+
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "examples")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
-
     pub provider_name: String,
+
+    pub language: Language,
     pub data: String,
 }
 
