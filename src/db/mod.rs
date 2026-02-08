@@ -1,5 +1,7 @@
 pub mod entities;
 pub mod enums;
+pub mod services;
+
 use sea_orm::{Database, DatabaseConnection, DbErr};
 
 pub use entities::{example, provider};
