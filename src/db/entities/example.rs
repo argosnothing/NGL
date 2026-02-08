@@ -9,7 +9,7 @@ pub struct Model {
     pub id: i32,
     pub provider_name: String,
 
-    pub language: Language,
+    pub language: Option<Language>,
     pub data: String,
 }
 

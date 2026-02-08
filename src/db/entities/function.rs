@@ -9,6 +9,7 @@ pub struct Model {
     pub id: i32,
 
     pub format: DocumentationFormat,
+    pub signature: String,
     pub provider_name: String,
     pub data: String,
 }

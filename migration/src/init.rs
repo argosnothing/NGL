@@ -33,7 +33,7 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(pk_auto(Example::Id))
                     .col(string(Example::ProviderName))
-                    .col(string(Example::Language))
+                    .col(string_null(Example::Language))
                     .col(string(Example::Data))
                     .foreign_key(
                         ForeignKey::create()
@@ -52,6 +52,7 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(pk_auto(Function::Id))
                     .col(string(Function::ProviderName))
+                    .col(string(Function::Signature))
                     .col(string(Function::Format))
                     .col(string(Function::Data))
                     .foreign_key(
@@ -103,6 +104,7 @@ enum Example {
 enum Function {
     Table,
     Id,
+    Signature,
     ProviderName,
     Format,
     Data,
