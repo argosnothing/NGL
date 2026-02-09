@@ -67,6 +67,7 @@ impl ProvidesFunctions<NoogleResponse> for Noogle {
 
                 function::ActiveModel {
                     id: NotSet,
+                    name: Set(doc.meta.title.clone()),
                     provider_name: Set("noogle".to_owned()),
                     format: Set(DocumentationFormat::Markdown),
                     signature: Set(doc.meta.signature.clone().unwrap()),

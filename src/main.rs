@@ -2,6 +2,7 @@ mod db;
 mod providers;
 mod schema;
 
+use db::services::services::query_data;
 use providers::{Provider, noogle::Noogle};
 use schema::{NGLDataKind, NGLRequest};
 
@@ -23,6 +24,16 @@ async fn main() -> anyhow::Result<()> {
     println!("Syncing Noogle data...");
     Noogle::sync(&db, request).await?;
     println!("Sync complete!");
+
+    let query_request = NGLRequest {
+        search_term: Some("add".to_string()),
+        providers: None,
+        kinds: Some(vec![NGLDataKind::Function, NGLDataKind::Example]),
+    };
+
+    println!("\nQuerying for 'add'...");
+    let response = query_data(&db, &query_request).await?;
+    println!("Response: {:#?}", response);
 
     Ok(())
 }

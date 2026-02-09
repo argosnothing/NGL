@@ -74,6 +74,7 @@ impl MigrationTrait for Migration {
                     .table(Alias::new("functions"))
                     .if_not_exists()
                     .col(pk_auto(Function::Id))
+                    .col(string(Function::Name))
                     .col(string(Function::ProviderName))
                     .col(string(Function::Signature))
                     .col(string(Function::Format))
@@ -144,6 +145,7 @@ enum Example {
 enum Function {
     Table,
     Id,
+    Name,
     Signature,
     ProviderName,
     Format,

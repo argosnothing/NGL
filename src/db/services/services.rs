@@ -1,8 +1,8 @@
 use sea_orm::{ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter};
 
 use crate::{
-    db::entities::{function, example},
-    schema::{ExampleData, NGLData, NGLDataKind, NGLDataVariant, NGLRequest},
+    db::entities::{example, function},
+    schema::{ExampleData, FunctionData, NGLData, NGLDataKind, NGLDataVariant, NGLRaw, NGLRequest},
 };
 
 pub async fn insert_functions(
@@ -66,8 +66,19 @@ async fn query_functions_table(
 
     let results: Vec<NGLData> = models
         .into_iter()
-        .map(|m| NGLData {
-            data: NGLDataVariant::Function(serde_json::from_str(&m.data).unwrap()),
+        .map(|m| {
+            let content = match m.format {
+                crate::db::enums::documentation_format::DocumentationFormat::Markdown => NGLRaw::Markdown(m.data),
+                crate::db::enums::documentation_format::DocumentationFormat::HTML => NGLRaw::HTML(m.data),
+                crate::db::enums::documentation_format::DocumentationFormat::PlainText => NGLRaw::PlainText(m.data),
+            };
+            NGLData {
+                data: NGLDataVariant::Function(FunctionData {
+                    name: m.name,
+                    signature: Some(m.signature),
+                    content,
+                }),
+            }
         })
         .collect();
 
