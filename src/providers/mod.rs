@@ -1,11 +1,11 @@
-use crate::{db::entities::{provider, provider_kind_cache}, schema::NGLRequest};
+use crate::{db::entities::{provider, provider_kind_cache}, schema::{NGLDataKind, NGLRequest}};
 use chrono::Utc;
 use sea_orm::{ActiveValue::Set, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter};
 
 pub mod noogle;
-pub mod traits;
 
 pub trait Provider {
+    fn get_supported_kinds() -> Vec<NGLDataKind>;
     async fn fetch_and_insert(db: &DatabaseConnection, request: NGLRequest) -> Result<(), DbErr>;
     fn get_name() -> String;
 
@@ -14,9 +14,14 @@ pub trait Provider {
             DbErr::Custom("No kinds specified in request".to_string())
         })?;
 
+        let supported_kinds = Self::get_supported_kinds();
         let mut kinds_to_sync = Vec::new();
 
         for kind in requested_kinds {
+            if !supported_kinds.contains(kind) {
+                continue;
+            }
+
             let cache_entry = provider_kind_cache::Entity::find()
                 .filter(provider_kind_cache::Column::ProviderName.eq(Self::get_name()))
                 .filter(provider_kind_cache::Column::Kind.eq(format!("{:?}", kind)))

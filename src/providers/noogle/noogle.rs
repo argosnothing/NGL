@@ -5,10 +5,7 @@ use crate::{
         enums::{documentation_format::DocumentationFormat, language::Language},
         services::services::{insert_examples, insert_functions},
     },
-    providers::{
-        Provider,
-        traits::{ProvidesExamples, ProvidesFunctions},
-    },
+    providers::Provider,
     schema::{NGLDataKind, NGLRequest},
 };
 use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
@@ -18,6 +15,10 @@ pub struct Noogle {}
 static ENDPOINT_URL: &str = "https://noogle.dev/api/v1/data";
 
 impl Provider for Noogle {
+    fn get_supported_kinds() -> Vec<NGLDataKind> {
+        vec![NGLDataKind::Function, NGLDataKind::Example]
+    }
+
     async fn fetch_and_insert(db: &DatabaseConnection, request: NGLRequest) -> Result<(), DbErr> {
         let response = reqwest::get(ENDPOINT_URL)
             .await
@@ -105,17 +106,5 @@ impl Provider for Noogle {
 
     fn get_name() -> String {
         "noogle".to_owned()
-    }
-}
-
-impl ProvidesFunctions<NoogleResponse> for Noogle {
-    fn get_functions(_data: &NoogleResponse) -> Vec<function::ActiveModel> {
-        Vec::new()
-    }
-}
-
-impl ProvidesExamples<NoogleResponse> for Noogle {
-    fn get_examples(_data: &NoogleResponse) -> Vec<example::ActiveModel> {
-        Vec::new()
     }
 }

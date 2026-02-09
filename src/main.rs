@@ -1,9 +1,10 @@
 mod db;
 mod providers;
+mod registry;
 mod schema;
 
 use db::services::services::query_data;
-use providers::{Provider, noogle::Noogle};
+use registry::ProviderRegistry;
 use schema::{NGLDataKind, NGLRequest};
 
 #[tokio::main]
@@ -16,23 +17,17 @@ async fn main() -> anyhow::Result<()> {
     println!("Database connected!");
 
     let request = NGLRequest {
-        search_term: Some("optional".to_string()),
-        providers: None,
-        kinds: Some(vec![NGLDataKind::Function, NGLDataKind::Example]),
-    };
-
-    println!("Syncing Noogle data...");
-    Noogle::sync(&db, request).await?;
-    println!("Sync complete!");
-
-    let query_request = NGLRequest {
-        search_term: Some("optional".to_string()),
+        search_term: Some("add".to_string()),
         providers: None,
         kinds: Some(vec![NGLDataKind::Function]),
     };
 
+    println!("Syncing data...");
+    ProviderRegistry::sync(&db, request.clone()).await?;
+    println!("Sync complete!");
+
     println!("\nQuerying for 'add'...");
-    let response = query_data(&db, &query_request).await?;
+    let response = query_data(&db, &request).await?;
     println!("Response: {:#?}", response);
 
     Ok(())
