@@ -1,25 +1,22 @@
 use sea_orm::{ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter};
 
 use crate::{
-    db::{entities::function, example},
-    providers::traits::{ProvidesExamples, ProvidesFunctions},
+    db::entities::{function, example},
     schema::{ExampleData, NGLData, NGLDataKind, NGLDataVariant, NGLRequest},
 };
 
-pub async fn insert_functions<P: ProvidesFunctions>(
+pub async fn insert_functions(
     db: &DatabaseConnection,
-    provider: &P,
+    models: Vec<function::ActiveModel>,
 ) -> Result<(), DbErr> {
-    let models = provider.get_functions();
     function::Entity::insert_many(models).exec(db).await?;
     Ok(())
 }
 
-pub async fn insert_examples<P: ProvidesExamples>(
+pub async fn insert_examples(
     db: &DatabaseConnection,
-    provider: &P,
+    models: Vec<example::ActiveModel>,
 ) -> Result<(), DbErr> {
-    let models = provider.get_examples();
     example::Entity::insert_many(models).exec(db).await?;
     Ok(())
 }
@@ -60,7 +57,7 @@ async fn query_functions_table(
 ) -> Result<Vec<NGLData>, DbErr> {
     let mut query = function::Entity::find();
 
-    if let Some(term) = &request.search_term {}
+    if let Some(_term) = &request.search_term {}
     if let Some(providers) = &request.providers {
         query = query.filter(function::Column::ProviderName.is_in(providers));
     }

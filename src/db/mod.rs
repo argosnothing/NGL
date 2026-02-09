@@ -4,7 +4,7 @@ pub mod services;
 
 use sea_orm::{Database, DatabaseConnection, DbErr};
 
-pub use entities::{example, provider};
+pub use entities::example;
 
 use migration::{Migrator, MigratorTrait};
 

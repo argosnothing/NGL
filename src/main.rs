@@ -2,9 +2,8 @@ mod db;
 mod providers;
 mod schema;
 
-use chrono::{Datelike, Local, NaiveDate};
-use providers::Provider;
-use providers::noogle::Noogle;
+use providers::{Provider, noogle::Noogle};
+use schema::{NGLDataKind, NGLRequest};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -15,10 +14,15 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Database connected!");
 
-    let i = 3;
-    let _response = Noogle::pull_data().await;
-    let p = _response;
-    let o = &i;
+    let request = NGLRequest {
+        search_term: None,
+        providers: None,
+        kinds: Some(vec![NGLDataKind::Function, NGLDataKind::Example]),
+    };
+
+    println!("Syncing Noogle data...");
+    Noogle::sync(&db, request).await?;
+    println!("Sync complete!");
 
     Ok(())
 }
