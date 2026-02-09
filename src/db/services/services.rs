@@ -57,7 +57,9 @@ async fn query_functions_table(
 ) -> Result<Vec<NGLData>, DbErr> {
     let mut query = function::Entity::find();
 
-    if let Some(_term) = &request.search_term {}
+    if let Some(term) = &request.search_term {
+        query = query.filter(function::Column::Name.contains(term));
+    }
     if let Some(providers) = &request.providers {
         query = query.filter(function::Column::ProviderName.is_in(providers));
     }
