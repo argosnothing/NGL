@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NGLRequest {
     pub search_term: Option<String>,
+    // TODO: We could probably make this an enum?
     pub providers: Option<Vec<String>>,
     pub kinds: Option<Vec<NGLDataKind>>,
 }
