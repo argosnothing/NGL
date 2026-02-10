@@ -13,6 +13,8 @@ Nix documentation is scattered across dozens of sources:
 
 The information exists, but finding it means knowing which site to check and learning multiple different interfaces.
 
+Several projects have been built to get data individually from these sources, but they tend to be scoped to the sources to varying degrees of generality.
+
 ## The Solution
 
 NGL provides a single search interface that:
@@ -27,7 +29,7 @@ NGL is simply a library that gives code a single source for a ton of different a
 
 ## Status
 
-Pattern for writing providers is done, Noogle provider is implemented (need minor cleanup on pruning data before db insert)
+Pattern for writing providers is done, Noogle provider is implemented (need minor cleanup on pruning data before db insert), see the [TODO](./TODO.md) for the biggest bounties.
 
 
 ## [Contributing!!!](./CONTRIBUTING.MD)
