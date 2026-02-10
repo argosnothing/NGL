@@ -12,4 +12,6 @@ The task of the provider is to:
 3. Use the current request to decide *what* information
 3. convert the providers local schema into the databases schema for that kind of data
 
+After implementing the provider you will need to add a new instance of the provider to the providers vec in the [registry](./src/registry.rs)
+
 This is all done through implementing the Provider trait on your provider, everything else NGL will handle for you. 
