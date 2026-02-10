@@ -1,10 +1,11 @@
 /// If you are writing a provider, read this module carefully.
-///
-///
-///
-///
 use crate::{
-    db::entities::{provider, provider_kind_cache},
+    db::{
+        entities::{
+            example, function, guide, option, package, provider, provider_kind_cache, r#type,
+        },
+        services::insert,
+    },
     schema::{NGLDataKind, NGLRequest},
 };
 use chrono::Utc;
@@ -18,8 +19,10 @@ pub mod noogle;
 pub struct ProviderInformation {
     /// What kinds should the provider support.
     /// For every kind in this list, your provider
-    /// needs to insert that data as part of it's
-    /// fetch_and_insert implementation to the db.
+    /// If you omit a kind, and a request comes in
+    /// that does not advertise it supports that kind,
+    /// even if it returns data of that kind, it will
+    /// not be ran.
     pub kinds: Vec<NGLDataKind>,
     /// Name of the provider
     pub name: String,
@@ -30,20 +33,87 @@ pub struct ProviderInformation {
 pub trait Provider {
     fn get_info() -> ProviderInformation;
 
+    /// Fetch functions from this provider. Return empty vec if not supported.
+    async fn fetch_functions(&mut self) -> Vec<function::ActiveModel>;
+
+    /// Fetch examples from this provider. Return empty vec if not supported.
+    async fn fetch_examples(&mut self) -> Vec<example::ActiveModel>;
+
+    /// Fetch guides from this provider. Return empty vec if not supported.
+    async fn fetch_guides(&mut self) -> Vec<guide::ActiveModel>;
+
+    /// Fetch options from this provider. Return empty vec if not supported.
+    async fn fetch_options(&mut self) -> Vec<option::ActiveModel>;
+
+    /// Fetch packages from this provider. Return empty vec if not supported.
+    async fn fetch_packages(&mut self) -> Vec<package::ActiveModel>;
+
+    /// Fetch types from this provider. Return empty vec if not supported.
+    async fn fetch_types(&mut self) -> Vec<r#type::ActiveModel>;
+
     /// This is where the provider inserts their data into the database using the sources.
-    /// A provider is responsible for
-    /// 1. Fetching whatever data it has,
-    /// 2. declaring each `kind` of data it supports in `ProviderInformation.kinds`
-    /// 3. for each supported kind, in fetch_and_insert you need to shape the data from the
-    ///    source into each kind of data, build a vec, and send it to the equivalent service insert.
-    ///    For example, if you support functions you need to make sure in fetch_and_insert you call
-    ///    the insert_functions function from services.rs
-    async fn fetch_and_insert(db: &DatabaseConnection, request: NGLRequest) -> Result<(), DbErr>;
+    /// A provider is responsible for:
+    /// 1. Implementing the fetch_* methods for each kind they support
+    /// 2. Declaring each supported `kind` in `ProviderInformation.kinds`
+    /// 3. This default implementation will call the appropriate fetch_* method and insert
+    async fn fetch_and_insert(
+        &mut self,
+        db: &DatabaseConnection,
+        request: NGLRequest,
+    ) -> Result<(), DbErr> {
+        let kinds = request
+            .kinds
+            .as_ref()
+            .ok_or_else(|| DbErr::Custom("No kinds specified in request".to_string()))?;
+
+        for kind in kinds {
+            match kind {
+                NGLDataKind::Function => {
+                    let models = self.fetch_functions().await;
+                    if !models.is_empty() {
+                        insert(db, models).await?;
+                    }
+                }
+                NGLDataKind::Example => {
+                    let models = self.fetch_examples().await;
+                    if !models.is_empty() {
+                        insert(db, models).await?;
+                    }
+                }
+                NGLDataKind::Guide => {
+                    let models = self.fetch_guides().await;
+                    if !models.is_empty() {
+                        insert(db, models).await?;
+                    }
+                }
+                NGLDataKind::Option => {
+                    let models = self.fetch_options().await;
+                    if !models.is_empty() {
+                        insert(db, models).await?;
+                    }
+                }
+                NGLDataKind::Package => {
+                    let models = self.fetch_packages().await;
+                    if !models.is_empty() {
+                        insert(db, models).await?;
+                    }
+                }
+                NGLDataKind::Type => {
+                    let models = self.fetch_types().await;
+                    if !models.is_empty() {
+                        insert(db, models).await?;
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
 
     /// sync handles the logic around when a provider will and wont request from its source.
     /// Providers job is only to insert into the db when asked it to, which is when
     /// the fetch_and_insert function will be ran.
-    async fn sync(db: &DatabaseConnection, request: NGLRequest) -> Result<(), DbErr> {
+    async fn sync(&mut self, db: &DatabaseConnection, request: NGLRequest) -> Result<(), DbErr> {
         let requested_kinds = request
             .kinds
             .as_ref()
@@ -99,7 +169,7 @@ pub trait Provider {
             ..request
         };
 
-        Self::fetch_and_insert(db, sync_request).await?;
+        self.fetch_and_insert(db, sync_request).await?;
 
         for kind in kinds_to_sync {
             let cache_model = provider_kind_cache::ActiveModel {

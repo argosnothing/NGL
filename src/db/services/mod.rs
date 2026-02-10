@@ -1,7 +1,7 @@
 use sea_orm::{ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter};
 
 use crate::{
-    db::entities::{example, function},
+    db::entities::{example, function, NGLDataEntity},
     schema::{
         ExampleData, FunctionData, NGLData, NGLDataKind, NGLDataVariant, NGLRaw, NGLRequest,
         NGLResponse,
@@ -13,6 +13,14 @@ pub async fn insert_functions(
     models: Vec<function::ActiveModel>,
 ) -> Result<(), DbErr> {
     function::Entity::insert_many(models).exec(db).await?;
+    Ok(())
+}
+
+pub async fn insert<T>(db: &DatabaseConnection, models: Vec<T>) -> Result<(), DbErr>
+where
+    T: NGLDataEntity,
+{
+    T::Entity::insert_many(models).exec(db).await?;
     Ok(())
 }
 

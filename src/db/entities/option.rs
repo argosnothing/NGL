@@ -2,17 +2,20 @@ use sea_orm::entity::prelude::*;
 
 use crate::{
     NGLDataKind,
-    db::{entities::NGLDataEntity, enums::language::Language},
+    db::{entities::NGLDataEntity, enums::documentation_format::DocumentationFormat},
 };
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-#[sea_orm(table_name = "examples")]
+#[sea_orm(table_name = "options")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
     pub provider_name: String,
 
-    pub language: Option<Language>,
+    pub name: String,
+    pub type_signature: Option<String>,
+    pub default_value: Option<String>,
+    pub format: DocumentationFormat,
     pub data: String,
 }
 
@@ -35,5 +38,5 @@ impl Related<super::provider::Entity> for Entity {
 impl ActiveModelBehavior for ActiveModel {}
 
 impl NGLDataEntity for ActiveModel {
-    const KIND: NGLDataKind = NGLDataKind::Example;
+    const KIND: NGLDataKind = NGLDataKind::Option;
 }

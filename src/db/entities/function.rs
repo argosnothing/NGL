@@ -1,6 +1,9 @@
 use sea_orm::entity::prelude::*;
 
-use crate::db::enums::documentation_format::DocumentationFormat;
+use crate::{
+    NGLDataKind,
+    db::{entities::NGLDataEntity, enums::documentation_format::DocumentationFormat},
+};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "functions")]
@@ -32,3 +35,7 @@ impl Related<super::provider::Entity> for Entity {
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+
+impl NGLDataEntity for ActiveModel {
+    const KIND: NGLDataKind = NGLDataKind::Function;
+}

@@ -14,7 +14,8 @@ macro_rules! register_providers {
                     })?;
 
                     if requested_kinds.iter().any(|k| <$provider>::get_info().kinds.contains(k)) {
-                        <$provider>::sync(db, request.clone()).await?;
+                        let mut provider = <$provider>::new();
+                        provider.sync(db, request.clone()).await?;
                     }
                 }
             )*
