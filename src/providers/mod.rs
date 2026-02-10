@@ -1,3 +1,8 @@
+/// If you are writing a provider, read this module carefully.
+///
+///
+///
+///
 use crate::{
     db::entities::{provider, provider_kind_cache},
     schema::{NGLDataKind, NGLRequest},
@@ -7,22 +12,37 @@ use sea_orm::{ActiveValue::Set, ColumnTrait, DatabaseConnection, DbErr, EntityTr
 
 pub mod noogle;
 
+/// Provider Information.
+/// Pay special attention to kinds field
+/// as this will be used
 pub struct ProviderInformation {
-    /// Name of the provider
-    pub name: String,
-    /// We should enforce that a provider credit the source with at least the url.
-    pub source: String,
     /// What kinds should the provider support.
     /// For every kind in this list, your provider
     /// needs to insert that data as part of it's
     /// fetch_and_insert implementation to the db.
     pub kinds: Vec<NGLDataKind>,
+    /// Name of the provider
+    pub name: String,
+    /// We should enforce that a provider credit the source with at least the url.
+    pub source: String,
 }
 
 pub trait Provider {
     fn get_info() -> ProviderInformation;
+
+    /// This is where the provider inserts their data into the database using the sources.
+    /// A provider is responsible for
+    /// 1. Fetching whatever data it has,
+    /// 2. declaring each `kind` of data it supports in `ProviderInformation.kinds`
+    /// 3. for each supported kind, in fetch_and_insert you need to shape the data from the
+    ///    source into each kind of data, build a vec, and send it to the equivalent service insert.
+    ///    For example, if you support functions you need to make sure in fetch_and_insert you call
+    ///    the insert_functions function from services.rs
     async fn fetch_and_insert(db: &DatabaseConnection, request: NGLRequest) -> Result<(), DbErr>;
 
+    /// sync handles the logic around when a provider will and wont request from its source.
+    /// Providers job is only to insert into the db when asked it to, which is when
+    /// the fetch_and_insert function will be ran.
     async fn sync(db: &DatabaseConnection, request: NGLRequest) -> Result<(), DbErr> {
         let requested_kinds = request
             .kinds
