@@ -5,20 +5,16 @@ use crate::{
         enums::{documentation_format::DocumentationFormat, language::Language},
         services::services::{insert_examples, insert_functions},
     },
-    providers::Provider,
+    providers::{Provider, ProviderInformation},
     schema::{NGLDataKind, NGLRequest},
 };
 use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
 use sea_orm::{ActiveValue::*, DatabaseConnection, DbErr};
 
-pub struct Noogle {}
 static ENDPOINT_URL: &str = "https://noogle.dev/api/v1/data";
+pub struct Noogle {}
 
 impl Provider for Noogle {
-    fn get_supported_kinds() -> Vec<NGLDataKind> {
-        vec![NGLDataKind::Function, NGLDataKind::Example]
-    }
-
     async fn fetch_and_insert(db: &DatabaseConnection, request: NGLRequest) -> Result<(), DbErr> {
         let response = reqwest::get(ENDPOINT_URL)
             .await
@@ -35,10 +31,6 @@ impl Provider for Noogle {
         let mut examples = Vec::new();
 
         for doc in &response.data {
-            if doc.meta.signature.is_none() {
-                continue;
-            }
-
             let content = doc
                 .content
                 .as_ref()
@@ -52,7 +44,7 @@ impl Provider for Noogle {
                     name: Set(doc.meta.title.clone()),
                     provider_name: Set("noogle".to_owned()),
                     format: Set(DocumentationFormat::Markdown),
-                    signature: Set(doc.meta.signature.clone().unwrap()),
+                    signature: Set(doc.meta.signature.clone()),
                     data: Set(content.clone()),
                 });
             }
@@ -104,7 +96,11 @@ impl Provider for Noogle {
         Ok(())
     }
 
-    fn get_name() -> String {
-        "noogle".to_owned()
+    fn get_info() -> ProviderInformation {
+        ProviderInformation {
+            name: "noogle".to_string(),
+            source: "https://noogle.dev".to_string(),
+            kinds: vec![NGLDataKind::Function, NGLDataKind::Example],
+        }
     }
 }

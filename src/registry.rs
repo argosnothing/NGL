@@ -13,7 +13,7 @@ macro_rules! register_providers {
                         DbErr::Custom("No kinds specified in request".to_string())
                     })?;
 
-                    if requested_kinds.iter().any(|k| <$provider>::get_supported_kinds().contains(k)) {
+                    if requested_kinds.iter().any(|k| <$provider>::get_info().kinds.contains(k)) {
                         <$provider>::sync(db, request.clone()).await?;
                     }
                 }

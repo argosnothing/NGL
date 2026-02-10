@@ -1,20 +1,36 @@
-use crate::{db::entities::{provider, provider_kind_cache}, schema::{NGLDataKind, NGLRequest}};
+use crate::{
+    db::entities::{provider, provider_kind_cache},
+    schema::{NGLDataKind, NGLRequest},
+};
 use chrono::Utc;
 use sea_orm::{ActiveValue::Set, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter};
 
 pub mod noogle;
 
+pub struct ProviderInformation {
+    /// Name of the provider
+    pub name: String,
+    /// We should enforce that a provider credit the source with at least the url.
+    pub source: String,
+    /// What kinds should the provider support.
+    /// For every kind in this list, your provider
+    /// needs to insert that data as part of it's
+    /// fetch_and_insert implementation to the db.
+    pub kinds: Vec<NGLDataKind>,
+}
+
 pub trait Provider {
-    fn get_supported_kinds() -> Vec<NGLDataKind>;
+    fn get_info() -> ProviderInformation;
     async fn fetch_and_insert(db: &DatabaseConnection, request: NGLRequest) -> Result<(), DbErr>;
-    fn get_name() -> String;
 
     async fn sync(db: &DatabaseConnection, request: NGLRequest) -> Result<(), DbErr> {
-        let requested_kinds = request.kinds.as_ref().ok_or_else(|| {
-            DbErr::Custom("No kinds specified in request".to_string())
-        })?;
+        let requested_kinds = request
+            .kinds
+            .as_ref()
+            .ok_or_else(|| DbErr::Custom("No kinds specified in request".to_string()))?;
 
-        let supported_kinds = Self::get_supported_kinds();
+        let info = Self::get_info();
+        let supported_kinds = info.kinds;
         let mut kinds_to_sync = Vec::new();
 
         for kind in requested_kinds {
@@ -23,7 +39,7 @@ pub trait Provider {
             }
 
             let cache_entry = provider_kind_cache::Entity::find()
-                .filter(provider_kind_cache::Column::ProviderName.eq(Self::get_name()))
+                .filter(provider_kind_cache::Column::ProviderName.eq(&info.name))
                 .filter(provider_kind_cache::Column::Kind.eq(format!("{:?}", kind)))
                 .one(db)
                 .await?;
@@ -41,12 +57,12 @@ pub trait Provider {
         }
 
         if kinds_to_sync.is_empty() {
-            println!("All requested kinds cached for {}", Self::get_name());
+            println!("All requested kinds cached for {}", &info.name);
             return Ok(());
         }
 
         let provider_model = provider::ActiveModel {
-            name: Set(Self::get_name()),
+            name: Set(info.name.clone()),
             last_updated: Set(Utc::now().into()),
         };
         provider::Entity::insert(provider_model)
@@ -67,7 +83,7 @@ pub trait Provider {
 
         for kind in kinds_to_sync {
             let cache_model = provider_kind_cache::ActiveModel {
-                provider_name: Set(Self::get_name()),
+                provider_name: Set(info.name.clone()),
                 kind: Set(format!("{:?}", kind)),
                 last_synced: Set(Utc::now().into()),
             };

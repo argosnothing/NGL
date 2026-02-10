@@ -42,7 +42,10 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk-provider_kind_cache-provider")
-                            .from(Alias::new("provider_kind_cache"), ProviderKindCache::ProviderName)
+                            .from(
+                                Alias::new("provider_kind_cache"),
+                                ProviderKindCache::ProviderName,
+                            )
                             .to(Alias::new("providers"), Provider::Name),
                     )
                     .to_owned(),
@@ -76,7 +79,7 @@ impl MigrationTrait for Migration {
                     .col(pk_auto(Function::Id))
                     .col(string(Function::Name))
                     .col(string(Function::ProviderName))
-                    .col(string(Function::Signature))
+                    .col(string_null(Function::Signature))
                     .col(string(Function::Format))
                     .col(string(Function::Data))
                     .foreign_key(
@@ -100,11 +103,19 @@ impl MigrationTrait for Migration {
             .await?;
 
         manager
-            .drop_table(Table::drop().table(Alias::new("provider_kind_cache")).to_owned())
+            .drop_table(
+                Table::drop()
+                    .table(Alias::new("provider_kind_cache"))
+                    .to_owned(),
+            )
             .await?;
 
         manager
-            .drop_table(Table::drop().table(Alias::new("provider_kind_cache")).to_owned())
+            .drop_table(
+                Table::drop()
+                    .table(Alias::new("provider_kind_cache"))
+                    .to_owned(),
+            )
             .await?;
 
         manager

@@ -10,7 +10,7 @@ pub struct Model {
 
     pub name: String,
     pub format: DocumentationFormat,
-    pub signature: String,
+    pub signature: Option<String>,
     pub provider_name: String,
     pub data: String,
 }

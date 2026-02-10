@@ -19,7 +19,7 @@ async fn main() -> anyhow::Result<()> {
     let request = NGLRequest {
         search_term: Some("add".to_string()),
         providers: None,
-        kinds: Some(vec![NGLDataKind::Function]),
+        kinds: Some(vec![NGLDataKind::Example, NGLDataKind::Function]),
     };
 
     println!("Syncing data...");
