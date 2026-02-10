@@ -12,6 +12,7 @@ use chrono::Utc;
 use sea_orm::{ActiveValue::Set, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter};
 
 pub mod hjem_docs;
+pub mod nixpkgs;
 pub mod noogle;
 
 /// Provider Information.
