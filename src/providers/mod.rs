@@ -1,5 +1,3 @@
-/// If you are writing a provider, read this module carefully.
-use async_trait::async_trait;
 use crate::{
     db::{
         entities::{
@@ -9,6 +7,8 @@ use crate::{
     },
     schema::{NGLDataKind, NGLRequest},
 };
+/// If you are writing a provider, read this module carefully.
+use async_trait::async_trait;
 use chrono::Utc;
 use sea_orm::{ActiveValue::Set, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter};
 
@@ -33,6 +33,15 @@ pub struct ProviderInformation {
     pub source: String,
 }
 
+/// Every Provider must implement these traits.
+/// Providers must do several things:
+/// 1. Advertise the [`NGLDataKind`]'s they support through [`kinds`] From
+///    ProviderInformation. This is used by the registry to decide when the provider
+///    syncs given different requests.
+/// 2. For every [`kind`] the provider advertises in it's information, implement the corresponding
+///    fetch function against that [`kind`]. If a provider does not support this kind of data, return
+///    an empty vec.
+/// 3. Document the source of the data.
 #[async_trait]
 pub trait Provider {
     fn get_info(&self) -> ProviderInformation;

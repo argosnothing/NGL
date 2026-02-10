@@ -17,7 +17,7 @@ async fn main() -> anyhow::Result<()> {
     println!("Database connected!");
 
     let request = NGLRequest {
-        search_term: Some("add".to_string()),
+        search_term: Some("optional".to_string()),
         providers: None,
         kinds: Some(vec![NGLDataKind::Example, NGLDataKind::Function]),
     };
