@@ -30,10 +30,11 @@ NGL is simply a library that gives code a single source for a ton of different a
 Pattern for writing providers is done, Noogle provider is implemented (need minor cleanup on pruning data before db insert)
 
 
-## Contributing!!!
+## [Contributing!!!](./CONTRIBUTING.MD)
 NGL is written to make adding your own sources a breeze, NGL just needs you to implement "just a few methods" from the Provider trait and you're off to the races!!
 The goal of NGL is to be GLOBAL, so this means writing a ton of providers, so having an ergonomic codebase for rapidly writing extraction code to the database has
-been paramount. 
+been paramount.   
+In the future I plan on adding functionality to work with different schemas, similarly to nix-search-tv   
 [Contributing!!!!](./CONTRIBUTING.MD)  
 
 
