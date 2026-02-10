@@ -16,6 +16,8 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Database connected!");
 
+    // Example request for data containing "optional"
+    // on the examples and function documentation
     let request = NGLRequest {
         search_term: Some("optional".to_string()),
         providers: None,
@@ -27,6 +29,8 @@ async fn main() -> anyhow::Result<()> {
     println!("Sync complete!");
 
     println!("\nQuerying for 'add'...");
+
+    // Example NGL response
     let response = query_data(&db, &request).await?;
     println!("Response: {:#?}", response);
 
