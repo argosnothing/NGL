@@ -40,6 +40,11 @@ impl Provider for Noogle {
                 .unwrap_or_default();
 
             if need_functions {
+                // We simply push all functions, even those
+                // without descriptions, signatures, and even data.
+                // The reason is sometimes it can be useful just
+                // knowing the function even exists, even if
+                // that means only the name is coming through.
                 functions.push(function::ActiveModel {
                     id: NotSet,
                     name: Set(doc.meta.title.clone()),
@@ -50,6 +55,8 @@ impl Provider for Noogle {
                 });
             }
 
+            // Examples are exclusively code blocks, content is where a code block
+            // is stored, so no content == no code block :)
             if need_examples && !content.is_empty() {
                 let parser = Parser::new(content.as_str());
                 let mut in_code_block = false;
