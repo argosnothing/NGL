@@ -23,20 +23,12 @@ NGL provides a single search interface that:
 
 Search once, get documentation from everywhere.
 
+NGL is simply a library that gives code a single source for a ton of different aggregated nix documentation. 
+
 ## Status
 
-Early development. Architecture and provider evaluation phase.
+Pattern for writing providers is done, Noogle provider is implemented (need minor cleanup on pruning data before db insert)
 
-See `.github/copilot-instructions.md` for detailed design documentation.
-
-## Example
-
-When you search "mkEnableOption":
-- Noogle provides function signature and examples
-- NixOS options shows where it's used
-- Guides show practical applications
-
-All in one normalized response.
 
 ## License
 
