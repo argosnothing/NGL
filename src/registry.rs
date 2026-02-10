@@ -2,40 +2,45 @@ use crate::{
     providers::{Provider, noogle::Noogle},
     schema::NGLRequest,
 };
+use futures::future::join_all;
 use sea_orm::{DatabaseConnection, DbErr};
-
-macro_rules! register_providers {
-    ($($provider:ty),*) => {
-        /// Iterate over every provider against the NGL request,
-        /// If a provider does not provide data in the currect request, do not
-        /// request any syncing from that provider.
-        pub async fn sync_all_providers(db: &DatabaseConnection, request: NGLRequest) -> Result<(), DbErr> {
-            $(
-                {
-                    let requested_kinds = request.kinds.as_ref().ok_or_else(|| {
-                        DbErr::Custom("No kinds specified in request".to_string())
-                    })?;
-
-                    if requested_kinds.iter().any(|k| <$provider>::get_info().kinds.contains(k)) {
-                        let mut provider = <$provider>::new();
-                        provider.sync(db, request.clone()).await?;
-                    }
-                }
-            )*
-            Ok(())
-        }
-    };
-}
-
-register_providers!(Noogle);
 
 pub struct ProviderRegistry;
 
 impl ProviderRegistry {
-    /// To add your provider to the registry for syncing to NGL Db, add your provider struct to
-    /// register_providers!(x,y,z)
-    /// src/registry.rs
+    /// Sync all registered providers with the database.
+    /// If no kinds are specified in the request, all providers are synced.
+    /// Otherwise, only providers that support the requested kinds are synced.
     pub async fn sync(db: &DatabaseConnection, request: NGLRequest) -> Result<(), DbErr> {
-        sync_all_providers(db, request).await
+        let providers: Vec<Box<dyn Provider + Send>> = vec![Box::new(Noogle::new())];
+
+        let sync_futures: Vec<_> = providers
+            .into_iter()
+            .filter_map(|mut provider| {
+                let should_sync = match &request.kinds {
+                    None => true,
+                    Some(requested_kinds) => {
+                        let info = provider.get_info();
+                        requested_kinds.iter().any(|k| info.kinds.contains(k))
+                    }
+                };
+
+                if should_sync {
+                    let request_clone = request.clone();
+                    let db_clone = db.clone();
+                    Some(async move { provider.sync(&db_clone, request_clone).await })
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let results = join_all(sync_futures).await;
+
+        for result in results {
+            result?;
+        }
+
+        Ok(())
     }
 }

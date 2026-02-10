@@ -1,5 +1,6 @@
 mod schema;
 
+use async_trait::async_trait;
 use crate::{
     db::{
         entities::{example, function},
@@ -38,8 +39,9 @@ impl Noogle {
     }
 }
 
+#[async_trait]
 impl Provider for Noogle {
-    fn get_info() -> ProviderInformation {
+    fn get_info(&self) -> ProviderInformation {
         ProviderInformation {
             name: "noogle".to_string(),
             source: "https://noogle.dev".to_string(),

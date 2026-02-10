@@ -1,4 +1,5 @@
 /// If you are writing a provider, read this module carefully.
+use async_trait::async_trait;
 use crate::{
     db::{
         entities::{
@@ -32,8 +33,9 @@ pub struct ProviderInformation {
     pub source: String,
 }
 
+#[async_trait]
 pub trait Provider {
-    fn get_info() -> ProviderInformation;
+    fn get_info(&self) -> ProviderInformation;
 
     /// Fetch functions from this provider. Return empty vec if not supported.
     async fn fetch_functions(&mut self) -> Vec<function::ActiveModel>;
@@ -121,7 +123,7 @@ pub trait Provider {
             .as_ref()
             .ok_or_else(|| DbErr::Custom("No kinds specified in request".to_string()))?;
 
-        let info = Self::get_info();
+        let info = self.get_info();
         let supported_kinds = info.kinds;
         let mut kinds_to_sync = Vec::new();
 

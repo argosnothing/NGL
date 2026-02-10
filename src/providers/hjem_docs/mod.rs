@@ -1,9 +1,11 @@
+use async_trait::async_trait;
 use crate::providers::Provider;
 
 pub struct HjemDocs {}
 
+#[async_trait]
 impl Provider for HjemDocs {
-    fn get_info() -> super::ProviderInformation {
+    fn get_info(&self) -> super::ProviderInformation {
         todo!()
     }
 

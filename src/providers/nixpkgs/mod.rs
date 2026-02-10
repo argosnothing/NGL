@@ -1,10 +1,12 @@
+use async_trait::async_trait;
 use crate::providers::Provider;
 pub mod schema;
 
 pub struct NixPkgs {}
 
+#[async_trait]
 impl Provider for NixPkgs {
-    fn get_info() -> super::ProviderInformation {
+    fn get_info(&self) -> super::ProviderInformation {
         todo!()
     }
 
