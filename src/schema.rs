@@ -114,6 +114,8 @@ pub enum NGLRaw {
 }
 
 impl NGLDataVariant {
+    /// Returns the kind of this [`NGLDataVariant`].
+    #[allow(unused)]
     pub fn kind(&self) -> NGLDataKind {
         match self {
             NGLDataVariant::Function(_) => NGLDataKind::Function,

@@ -90,10 +90,109 @@ impl MigrationTrait for Migration {
                     )
                     .to_owned(),
             )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(Alias::new("guides"))
+                    .if_not_exists()
+                    .col(pk_auto(Guide::Id))
+                    .col(string(Guide::ProviderName))
+                    .col(string(Guide::Title))
+                    .col(string(Guide::Format))
+                    .col(string(Guide::Data))
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk-guide-provider")
+                            .from(Alias::new("guides"), Guide::ProviderName)
+                            .to(Alias::new("providers"), Provider::Name),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(Alias::new("options"))
+                    .if_not_exists()
+                    .col(pk_auto(Option::Id))
+                    .col(string(Option::ProviderName))
+                    .col(string(Option::Name))
+                    .col(string_null(Option::TypeSignature))
+                    .col(string_null(Option::DefaultValue))
+                    .col(string(Option::Format))
+                    .col(string(Option::Data))
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk-option-provider")
+                            .from(Alias::new("options"), Option::ProviderName)
+                            .to(Alias::new("providers"), Provider::Name),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(Alias::new("packages"))
+                    .if_not_exists()
+                    .col(pk_auto(Package::Id))
+                    .col(string(Package::ProviderName))
+                    .col(string(Package::Name))
+                    .col(string_null(Package::Version))
+                    .col(string(Package::Format))
+                    .col(string(Package::Data))
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk-package-provider")
+                            .from(Alias::new("packages"), Package::ProviderName)
+                            .to(Alias::new("providers"), Provider::Name),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(Alias::new("types"))
+                    .if_not_exists()
+                    .col(pk_auto(Type::Id))
+                    .col(string(Type::ProviderName))
+                    .col(string(Type::Name))
+                    .col(string(Type::Format))
+                    .col(string(Type::Data))
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk-type-provider")
+                            .from(Alias::new("types"), Type::ProviderName)
+                            .to(Alias::new("providers"), Provider::Name),
+                    )
+                    .to_owned(),
+            )
             .await
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .drop_table(Table::drop().table(Alias::new("types")).to_owned())
+            .await?;
+
+        manager
+            .drop_table(Table::drop().table(Alias::new("packages")).to_owned())
+            .await?;
+
+        manager
+            .drop_table(Table::drop().table(Alias::new("options")).to_owned())
+            .await?;
+
+        manager
+            .drop_table(Table::drop().table(Alias::new("guides")).to_owned())
+            .await?;
+
         manager
             .drop_table(Table::drop().table(Alias::new("functions")).to_owned())
             .await?;
@@ -159,6 +258,53 @@ enum Function {
     Name,
     Signature,
     ProviderName,
+    Format,
+    Data,
+}
+
+#[derive(DeriveIden)]
+#[sea_orm(iden = "guides")]
+enum Guide {
+    Table,
+    Id,
+    ProviderName,
+    Title,
+    Format,
+    Data,
+}
+
+#[derive(DeriveIden)]
+#[sea_orm(iden = "options")]
+enum Option {
+    Table,
+    Id,
+    ProviderName,
+    Name,
+    TypeSignature,
+    DefaultValue,
+    Format,
+    Data,
+}
+
+#[derive(DeriveIden)]
+#[sea_orm(iden = "packages")]
+enum Package {
+    Table,
+    Id,
+    ProviderName,
+    Name,
+    Version,
+    Format,
+    Data,
+}
+
+#[derive(DeriveIden)]
+#[sea_orm(iden = "types")]
+enum Type {
+    Table,
+    Id,
+    ProviderName,
+    Name,
     Format,
     Data,
 }
