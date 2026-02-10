@@ -1,3 +1,5 @@
+// Base schema defining the language of NGL data structure
+// Defines components of an NGLRequest and an NGLResponse
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
