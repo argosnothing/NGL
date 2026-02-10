@@ -4,7 +4,7 @@ use crate::{
     db::{
         entities::{example, function},
         enums::{documentation_format::DocumentationFormat, language::Language},
-        services::services::{insert_examples, insert_functions},
+        services::{insert_examples, insert_functions},
     },
     providers::{Provider, ProviderInformation, noogle::schema::NoogleResponse},
     schema::{NGLDataKind, NGLRequest},

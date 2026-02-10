@@ -1,5 +1,4 @@
 use sea_orm::entity::prelude::*;
-use crate::schema::NGLDataKind;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "provider_kind_cache")]

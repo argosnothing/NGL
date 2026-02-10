@@ -8,9 +8,10 @@ pub use schema::{
     NGLResponse, OptionData, PackageData, TypeData,
 };
 
-use db::services::services::query_data;
 use registry::ProviderRegistry;
 use sea_orm::DbErr;
+
+use crate::db::services::query_data;
 
 pub async fn query(request: NGLRequest) -> Result<Vec<NGLResponse>, DbErr> {
     let database_url =

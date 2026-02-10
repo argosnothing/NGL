@@ -3,7 +3,7 @@ mod providers;
 mod registry;
 mod schema;
 
-use db::services::services::query_data;
+use db::services::query_data;
 use registry::ProviderRegistry;
 use schema::{NGLDataKind, NGLRequest};
 
