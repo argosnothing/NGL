@@ -7,6 +7,8 @@ Feel free to open PR's for any of these todos
    Say you make a query to NGL with no filters, you are querying the entire db. This should not be done as a single response, so we would need that
    NGLRequests to have an index for what part of the response it is trying to get.
    Meaning the retrieval should only send a bit of that data. 
+   Streaming would be the ideal way to do this, the issue, is many apis just provide a single endpoint block of data, so there is no
+   reason to stream that. HMM!
 3. Implement Meta Providers that makes it easier to work with similar kinds of sources(?)
    Got this idea looking through nix-search-tv docu on an experimental feature they have under the experimental option.
    This could also take the form of having a kind of meta provider that reads a config file for urls that have that meta provider as it's provider
