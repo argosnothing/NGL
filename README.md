@@ -33,6 +33,8 @@ Pattern for writing providers is done, Noogle provider is implemented (need mino
 
 
 ## [Contributing!!!](./CONTRIBUTING.MD)
+Still in early days, **BUT**   
+
 NGL is written to make adding your own sources a breeze, NGL just needs you to implement "just a few methods" from the Provider trait and you're off to the races!!
 The goal of NGL is to be GLOBAL, so this means writing a ton of providers, so having an ergonomic codebase for rapidly writing extraction code to the database has
 been paramount.   
