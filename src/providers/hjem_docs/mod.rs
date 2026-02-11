@@ -1,6 +1,7 @@
-use async_trait::async_trait;
 use crate::providers::Provider;
+use async_trait::async_trait;
 
+#[allow(unused)]
 pub struct HjemDocs {}
 
 #[async_trait]

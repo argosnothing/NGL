@@ -16,12 +16,12 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Database connected!");
 
-    // Example request for data containing "optional"
-    // on the examples and function documentation
+    // Example request for data containing "lib.optionalAttrs"
+    // on the function documentation
     let request = NGLRequest {
-        search_term: Some("optional".to_string()),
+        search_term: Some("lib.optionalAttrs".to_string()),
         providers: None,
-        kinds: Some(vec![NGLDataKind::Example, NGLDataKind::Function]),
+        kinds: Some(vec![NGLDataKind::Function]),
     };
 
     println!("Syncing data...");

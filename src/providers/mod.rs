@@ -30,6 +30,7 @@ pub struct ProviderInformation {
     /// Name of the provider
     pub name: String,
     /// We should enforce that a provider credit the source with at least the url.
+    #[allow(unused)]
     pub source: String,
 }
 

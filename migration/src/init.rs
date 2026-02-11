@@ -226,6 +226,7 @@ impl MigrationTrait for Migration {
 #[derive(DeriveIden)]
 #[sea_orm(iden = "providers")]
 enum Provider {
+    #[allow(unused)]
     Table,
     Name,
     LastUpdated,
@@ -234,6 +235,7 @@ enum Provider {
 #[derive(DeriveIden)]
 #[sea_orm(iden = "provider_kind_cache")]
 enum ProviderKindCache {
+    #[allow(unused)]
     Table,
     ProviderName,
     Kind,
@@ -243,6 +245,7 @@ enum ProviderKindCache {
 #[derive(DeriveIden)]
 #[sea_orm(iden = "examples")]
 enum Example {
+    #[allow(unused)]
     Table,
     Id,
     ProviderName,
@@ -253,6 +256,7 @@ enum Example {
 #[derive(DeriveIden)]
 #[sea_orm(iden = "functions")]
 enum Function {
+    #[allow(unused)]
     Table,
     Id,
     Name,
@@ -265,6 +269,7 @@ enum Function {
 #[derive(DeriveIden)]
 #[sea_orm(iden = "guides")]
 enum Guide {
+    #[allow(unused)]
     Table,
     Id,
     ProviderName,
@@ -276,6 +281,7 @@ enum Guide {
 #[derive(DeriveIden)]
 #[sea_orm(iden = "options")]
 enum Option {
+    #[allow(unused)]
     Table,
     Id,
     ProviderName,
@@ -289,6 +295,7 @@ enum Option {
 #[derive(DeriveIden)]
 #[sea_orm(iden = "packages")]
 enum Package {
+    #[allow(unused)]
     Table,
     Id,
     ProviderName,
@@ -301,6 +308,7 @@ enum Package {
 #[derive(DeriveIden)]
 #[sea_orm(iden = "types")]
 enum Type {
+    #[allow(unused)]
     Table,
     Id,
     ProviderName,

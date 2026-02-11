@@ -10,5 +10,6 @@ pub mod provider_kind_cache;
 pub mod r#type;
 
 pub trait NGLDataEntity: sea_orm::ActiveModelTrait {
+    #[allow(unused)]
     const KIND: NGLDataKind;
 }

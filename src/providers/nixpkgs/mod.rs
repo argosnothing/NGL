@@ -1,5 +1,6 @@
-use async_trait::async_trait;
+#![allow(unused)]
 use crate::providers::Provider;
+use async_trait::async_trait;
 pub mod schema;
 
 pub struct NixPkgs {}
