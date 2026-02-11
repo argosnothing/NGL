@@ -88,28 +88,34 @@ pub async fn query_data(
     db: &DatabaseConnection,
     request: &NGLRequest,
 ) -> Result<Vec<NGLResponse>, DbErr> {
-    let search_term = request
-        .search_term
-        .as_ref()
-        .map(|s| format!("\"{}\"*", s.replace("\"", "\"\"")))
-        .unwrap_or_else(|| "*".to_string());
-
-    let mut query = format!(
-        "SELECT entity_id, kind, provider_name FROM ngl_search WHERE ngl_search MATCH '{}'",
-        search_term
-    );
+    let mut query = "SELECT entity_id, kind, provider_name FROM ngl_search".to_string();
+    let mut has_where = false;
+    
+    if let Some(term) = request.search_term.as_ref() {
+        if !term.is_empty() {
+            let search_term = format!("\"{}\"*", term.replace("\"", "\"\""));
+            query.push_str(&format!(" WHERE ngl_search MATCH '{}'", search_term));
+            has_where = true;
+        }
+    }
 
     if let Some(kinds) = &request.kinds {
         let kind_filter: Vec<String> = kinds.iter().map(|k| format!("'{:?}'", k)).collect();
-        query.push_str(&format!(" AND kind IN ({})", kind_filter.join(",")));
+        if has_where {
+            query.push_str(&format!(" AND kind IN ({})", kind_filter.join(",")));
+        } else {
+            query.push_str(&format!(" WHERE kind IN ({})", kind_filter.join(",")));
+            has_where = true;
+        }
     }
 
     if let Some(providers) = &request.providers {
         let provider_filter: Vec<String> = providers.iter().map(|p| format!("'{}'", p)).collect();
-        query.push_str(&format!(
-            " AND provider_name IN ({})",
-            provider_filter.join(",")
-        ));
+        if has_where {
+            query.push_str(&format!(" AND provider_name IN ({})", provider_filter.join(",")));
+        } else {
+            query.push_str(&format!(" WHERE provider_name IN ({})", provider_filter.join(",")));
+        }
     }
 
     query.push_str(" ORDER BY rank");
