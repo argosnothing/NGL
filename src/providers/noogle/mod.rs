@@ -129,18 +129,22 @@ impl Provider for Noogle {
         self.cached_examples.clone().unwrap()
     }
 
+    // noogle
     async fn fetch_guides(&mut self) -> Vec<crate::db::entities::guide::ActiveModel> {
         vec![]
     }
 
+    // only
     async fn fetch_options(&mut self) -> Vec<crate::db::entities::option::ActiveModel> {
         vec![]
     }
 
+    // does
     async fn fetch_packages(&mut self) -> Vec<crate::db::entities::package::ActiveModel> {
         vec![]
     }
 
+    // functions!
     async fn fetch_types(&mut self) -> Vec<crate::db::entities::r#type::ActiveModel> {
         vec![]
     }
