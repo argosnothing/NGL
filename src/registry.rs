@@ -35,10 +35,14 @@ impl ProviderRegistry {
             })
             .collect();
 
-        let results = join_all(sync_futures).await;
+        if !sync_futures.is_empty() {
+            let results = join_all(sync_futures).await;
 
-        for result in results {
-            result?;
+            for result in results {
+                result?;
+            }
+
+            crate::db::services::populate_fts5(db).await?;
         }
 
         Ok(())

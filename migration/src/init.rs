@@ -173,10 +173,33 @@ impl MigrationTrait for Migration {
                     )
                     .to_owned(),
             )
-            .await
+            .await?;
+
+        manager
+            .get_connection()
+            .execute_unprepared(
+                r#"
+                CREATE VIRTUAL TABLE IF NOT EXISTS ngl_search USING fts5(
+                    entity_id,
+                    kind,
+                    provider_name,
+                    title,
+                    content,
+                    tokenize = 'ascii'
+                )
+                "#,
+            )
+            .await?;
+
+        Ok(())
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .get_connection()
+            .execute_unprepared("DROP TABLE IF EXISTS ngl_search")
+            .await?;
+
         manager
             .drop_table(Table::drop().table(Alias::new("types")).to_owned())
             .await?;

@@ -9,6 +9,15 @@ use schema::{NGLDataKind, NGLRequest};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let args: Vec<String> = std::env::args().collect();
+    
+    if args.len() < 2 {
+        eprintln!("Usage: {} <search_term>", args[0]);
+        std::process::exit(1);
+    }
+    
+    let term = args[1].clone();
+    
     let database_url =
         std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://ngl.db?mode=rwc".to_string());
 
@@ -16,9 +25,6 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Database connected!");
 
-    let term = "lib.optionalAttrs".to_string();
-    // Example request for data containing term
-    // on the function documentation
     let request = NGLRequest {
         search_term: Some(term.clone()),
         providers: None,

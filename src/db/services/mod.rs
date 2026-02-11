@@ -1,12 +1,21 @@
-use sea_orm::{ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter};
+use sea_orm::{
+    ConnectionTrait, DatabaseConnection, DbErr, EntityTrait, FromQueryResult, Statement,
+};
 
 use crate::{
-    db::entities::{NGLDataEntity, example, function},
+    db::entities::{NGLDataEntity, example, function, guide, option, package, r#type},
     schema::{
-        ExampleData, FunctionData, NGLData, NGLDataKind, NGLDataVariant, NGLRaw, NGLRequest,
-        NGLResponse,
+        ExampleData, FunctionData, GuideData, NGLData, NGLDataVariant, NGLRaw, NGLRequest,
+        NGLResponse, OptionData, PackageData, TypeData,
     },
 };
+
+#[derive(FromQueryResult)]
+struct SearchResult {
+    entity_id: i32,
+    kind: String,
+    provider_name: String,
+}
 
 pub async fn insert<T>(db: &DatabaseConnection, models: Vec<T>) -> Result<(), DbErr>
 where
@@ -16,46 +25,121 @@ where
     Ok(())
 }
 
+#[allow(dead_code)]
+pub async fn populate_fts5(db: &DatabaseConnection) -> Result<(), DbErr> {
+    db.execute(Statement::from_string(
+        db.get_database_backend(),
+        "DELETE FROM ngl_search".to_owned(),
+    ))
+    .await?;
+
+    db.execute(Statement::from_string(
+        db.get_database_backend(),
+        "INSERT INTO ngl_search (entity_id, kind, provider_name, title, content)
+         SELECT id, 'Function', provider_name, name, '' FROM functions"
+            .to_owned(),
+    ))
+    .await?;
+
+    db.execute(Statement::from_string(
+        db.get_database_backend(),
+        "INSERT INTO ngl_search (entity_id, kind, provider_name, title, content)
+         SELECT id, 'Example', provider_name, '', data FROM examples"
+            .to_owned(),
+    ))
+    .await?;
+
+    db.execute(Statement::from_string(
+        db.get_database_backend(),
+        "INSERT INTO ngl_search (entity_id, kind, provider_name, title, content)
+         SELECT id, 'Guide', provider_name, title, data FROM guides"
+            .to_owned(),
+    ))
+    .await?;
+
+    db.execute(Statement::from_string(
+        db.get_database_backend(),
+        "INSERT INTO ngl_search (entity_id, kind, provider_name, title, content)
+         SELECT id, 'Option', provider_name, name, data FROM options"
+            .to_owned(),
+    ))
+    .await?;
+
+    db.execute(Statement::from_string(
+        db.get_database_backend(),
+        "INSERT INTO ngl_search (entity_id, kind, provider_name, title, content)
+         SELECT id, 'Package', provider_name, name, data FROM packages"
+            .to_owned(),
+    ))
+    .await?;
+
+    db.execute(Statement::from_string(
+        db.get_database_backend(),
+        "INSERT INTO ngl_search (entity_id, kind, provider_name, title, content)
+         SELECT id, 'Type', provider_name, name, data FROM types"
+            .to_owned(),
+    ))
+    .await?;
+
+    Ok(())
+}
+
 pub async fn query_data(
     db: &DatabaseConnection,
     request: &NGLRequest,
 ) -> Result<Vec<NGLResponse>, DbErr> {
-    let mut results = Vec::new();
-
-    let kinds = request
-        .kinds
+    let search_term = request
+        .search_term
         .as_ref()
-        .map(|k| k.clone())
-        .unwrap_or_else(|| vec![NGLDataKind::Function, NGLDataKind::Example]);
+        .map(|s| format!("\"{}\"*", s.replace("\"", "\"\"")))
+        .unwrap_or_else(|| "*".to_string());
 
-    for kind in kinds {
-        match kind {
-            NGLDataKind::Function => {
-                let functions = query_functions_table(db, request).await?;
-                results.extend(functions);
-            }
-            NGLDataKind::Example => {
-                let examples = query_examples_table(db, request).await?;
-                results.extend(examples);
-            }
-            NGLDataKind::Guide => todo!(),
-            NGLDataKind::Option => todo!(),
-            NGLDataKind::Package => todo!(),
-            NGLDataKind::Type => todo!(),
-        }
+    let mut query = format!(
+        "SELECT entity_id, kind, provider_name FROM ngl_search WHERE ngl_search MATCH '{}'",
+        search_term
+    );
+
+    if let Some(kinds) = &request.kinds {
+        let kind_filter: Vec<String> = kinds.iter().map(|k| format!("'{:?}'", k)).collect();
+        query.push_str(&format!(" AND kind IN ({})", kind_filter.join(",")));
     }
 
-    let mut provider_map: std::collections::HashMap<String, Vec<NGLData>> =
+    if let Some(providers) = &request.providers {
+        let provider_filter: Vec<String> = providers.iter().map(|p| format!("'{}'", p)).collect();
+        query.push_str(&format!(
+            " AND provider_name IN ({})",
+            provider_filter.join(",")
+        ));
+    }
+
+    query.push_str(" ORDER BY rank");
+
+    let search_results: Vec<SearchResult> =
+        SearchResult::find_by_statement(Statement::from_string(db.get_database_backend(), query))
+            .all(db)
+            .await?;
+
+    let mut provider_data: std::collections::HashMap<String, Vec<NGLData>> =
         std::collections::HashMap::new();
 
-    for (provider_name, data) in results {
-        provider_map
-            .entry(provider_name)
+    for result in search_results {
+        let ngl_data = match result.kind.as_str() {
+            "Function" => fetch_function(db, result.entity_id).await?,
+            "Example" => fetch_example(db, result.entity_id).await?,
+            "Guide" => fetch_guide(db, result.entity_id).await?,
+            "Option" => fetch_option(db, result.entity_id).await?,
+            "Package" => fetch_package(db, result.entity_id).await?,
+            "Type" => fetch_type(db, result.entity_id).await?,
+            _ => continue,
+        };
+
+        provider_data
+            .entry(result.provider_name)
             .or_insert_with(Vec::new)
-            .push(data);
+            .push(ngl_data);
     }
 
-    let responses: Vec<NGLResponse> = provider_map
+    let responses: Vec<NGLResponse> = provider_data
         .into_iter()
         .map(|(provider_name, matches)| NGLResponse {
             provider_name,
@@ -65,82 +149,116 @@ pub async fn query_data(
 
     Ok(responses)
 }
-async fn query_functions_table(
-    db: &DatabaseConnection,
-    request: &NGLRequest,
-) -> Result<Vec<(String, NGLData)>, DbErr> {
-    let mut query = function::Entity::find();
 
-    if let Some(term) = &request.search_term {
-        query = query.filter(function::Column::Name.contains(term));
-    }
-    if let Some(providers) = &request.providers {
-        query = query.filter(function::Column::ProviderName.is_in(providers));
-    }
+async fn fetch_function(db: &DatabaseConnection, id: i32) -> Result<NGLData, DbErr> {
+    let model = function::Entity::find_by_id(id)
+        .one(db)
+        .await?
+        .ok_or_else(|| DbErr::RecordNotFound(format!("Function {}", id)))?;
 
-    let models = query.all(db).await?;
+    let content = match model.format {
+        crate::db::enums::documentation_format::DocumentationFormat::Markdown => {
+            NGLRaw::Markdown(model.data)
+        }
+        crate::db::enums::documentation_format::DocumentationFormat::HTML => {
+            NGLRaw::HTML(model.data)
+        }
+        crate::db::enums::documentation_format::DocumentationFormat::PlainText => {
+            NGLRaw::PlainText(model.data)
+        }
+    };
 
-    let results: Vec<(String, NGLData)> = models
-        .into_iter()
-        .map(|m| {
-            let provider_name = m.provider_name.clone();
-            let content = match m.format {
-                crate::db::enums::documentation_format::DocumentationFormat::Markdown => {
-                    NGLRaw::Markdown(m.data)
-                }
-                crate::db::enums::documentation_format::DocumentationFormat::HTML => {
-                    NGLRaw::HTML(m.data)
-                }
-                crate::db::enums::documentation_format::DocumentationFormat::PlainText => {
-                    NGLRaw::PlainText(m.data)
-                }
-            };
-            (
-                provider_name,
-                NGLData {
-                    data: NGLDataVariant::Function(FunctionData {
-                        name: m.name,
-                        signature: m.signature,
-                        content,
-                    }),
-                },
-            )
-        })
-        .collect();
-
-    Ok(results)
+    Ok(NGLData {
+        data: NGLDataVariant::Function(FunctionData {
+            name: model.name,
+            signature: model.signature,
+            content,
+        }),
+    })
 }
 
-async fn query_examples_table(
-    db: &DatabaseConnection,
-    request: &NGLRequest,
-) -> Result<Vec<(String, NGLData)>, DbErr> {
-    let mut query = example::Entity::find();
+async fn fetch_example(db: &DatabaseConnection, id: i32) -> Result<NGLData, DbErr> {
+    let model = example::Entity::find_by_id(id)
+        .one(db)
+        .await?
+        .ok_or_else(|| DbErr::RecordNotFound(format!("Example {}", id)))?;
 
-    if let Some(term) = &request.search_term {
-        query = query.filter(example::Column::Data.contains(term))
-    }
-    if let Some(providers) = &request.providers {
-        query = query.filter(example::Column::ProviderName.is_in(providers));
-    }
+    Ok(NGLData {
+        data: NGLDataVariant::Example(ExampleData {
+            code: model.data,
+            language: model.language.map(|lang| lang.to_string()),
+        }),
+    })
+}
 
-    let models = query.all(db).await?;
+async fn fetch_guide(db: &DatabaseConnection, id: i32) -> Result<NGLData, DbErr> {
+    let model = guide::Entity::find_by_id(id)
+        .one(db)
+        .await?
+        .ok_or_else(|| DbErr::RecordNotFound(format!("Guide {}", id)))?;
 
-    let results: Vec<(String, NGLData)> = models
-        .into_iter()
-        .map(|m| {
-            let provider_name = m.provider_name.clone();
-            (
-                provider_name,
-                NGLData {
-                    data: NGLDataVariant::Example(ExampleData {
-                        code: m.data,
-                        language: m.language.map(|lang| lang.to_string()),
-                    }),
-                },
-            )
-        })
-        .collect();
+    let content = match model.format {
+        crate::db::enums::documentation_format::DocumentationFormat::Markdown => {
+            NGLRaw::Markdown(model.data)
+        }
+        crate::db::enums::documentation_format::DocumentationFormat::HTML => {
+            NGLRaw::HTML(model.data)
+        }
+        crate::db::enums::documentation_format::DocumentationFormat::PlainText => {
+            NGLRaw::PlainText(model.data)
+        }
+    };
 
-    Ok(results)
+    Ok(NGLData {
+        data: NGLDataVariant::Guide(GuideData {
+            title: NGLRaw::PlainText(model.title),
+            content,
+        }),
+    })
+}
+
+async fn fetch_option(db: &DatabaseConnection, id: i32) -> Result<NGLData, DbErr> {
+    let model = option::Entity::find_by_id(id)
+        .one(db)
+        .await?
+        .ok_or_else(|| DbErr::RecordNotFound(format!("Option {}", id)))?;
+
+    Ok(NGLData {
+        data: NGLDataVariant::Option(OptionData {
+            name: model.name,
+            option_type: model.type_signature,
+            default_value: model.default_value,
+            description: Some(model.data),
+            example: None,
+        }),
+    })
+}
+
+async fn fetch_package(db: &DatabaseConnection, id: i32) -> Result<NGLData, DbErr> {
+    let model = package::Entity::find_by_id(id)
+        .one(db)
+        .await?
+        .ok_or_else(|| DbErr::RecordNotFound(format!("Package {}", id)))?;
+
+    Ok(NGLData {
+        data: NGLDataVariant::Package(PackageData {
+            name: model.name,
+            version: model.version,
+            description: Some(model.data),
+        }),
+    })
+}
+
+async fn fetch_type(db: &DatabaseConnection, id: i32) -> Result<NGLData, DbErr> {
+    let model = r#type::Entity::find_by_id(id)
+        .one(db)
+        .await?
+        .ok_or_else(|| DbErr::RecordNotFound(format!("Type {}", id)))?;
+
+    Ok(NGLData {
+        data: NGLDataVariant::Type(TypeData {
+            name: model.name,
+            description: Some(model.data),
+        }),
+    })
 }
