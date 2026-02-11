@@ -16,19 +16,20 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Database connected!");
 
-    // Example request for data containing "lib.optionalAttrs"
+    let term = "lib.optionalAttrs".to_string();
+    // Example request for data containing term
     // on the function documentation
     let request = NGLRequest {
-        search_term: Some("lib.optionalAttrs".to_string()),
+        search_term: Some(term.clone()),
         providers: None,
-        kinds: Some(vec![NGLDataKind::Function]),
+        kinds: Some(vec![NGLDataKind::Function, NGLDataKind::Example]),
     };
 
     println!("Syncing data...");
     ProviderRegistry::sync(&db, request.clone()).await?;
     println!("Sync complete!");
 
-    println!("\nQuerying for 'add'...");
+    println!("\nQuerying for '{}'...", term.clone());
 
     // Example NGL response
     let response = query_data(&db, &request).await?;
