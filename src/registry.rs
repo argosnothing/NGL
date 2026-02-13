@@ -22,7 +22,7 @@ impl ProviderRegistry {
             .map(|mut provider| {
             let request_clone = request.clone();
             let db_clone = db.clone();
-            async move { provider.sync(&db_clone, request_clone).await }
+            async move { provider.refresh(&db_clone, request_clone).await }
             })
             .collect();
 

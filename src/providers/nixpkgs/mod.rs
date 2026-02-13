@@ -1,6 +1,9 @@
 #![allow(unused)]
-use crate::providers::Provider;
+use crate::providers::{Provider, ProviderEvent, Sink};
+use crate::schema::NGLDataKind;
 use async_trait::async_trait;
+use sea_orm::DbErr;
+use std::sync::Arc;
 pub mod schema;
 
 use brotli2::read::BrotliDecoder;
@@ -8,7 +11,6 @@ use sea_orm::ActiveValue::*;
 
 pub struct NixPkgs {}
 
-/// Ideally we would have this work with streams if possible, so we don't flood memory.
 impl NixPkgs {
     pub fn new() -> Self {
         Self {}
@@ -19,96 +21,84 @@ impl NixPkgs {
 impl Provider for NixPkgs {
     fn get_info(&self) -> super::ProviderInformation {
         super::ProviderInformation {
-            kinds: vec![crate::schema::NGLDataKind::Package],
+            kinds: vec![NGLDataKind::Package],
             name: "nixpkgs".to_string(),
             source: "https://releases.nixos.org/nixpkgs/".to_string(),
         }
     }
-    
-    async fn fetch_packages(&mut self) -> Vec<crate::db::entities::package::ActiveModel> {
-        if let Ok(release) = std::env::var("NGL_NIXPKGS_RELEASE") {
-            return self.fetch_packages_for_release(release).await;
+
+    async fn sync(&mut self, sink: Arc<dyn Sink>, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
+        if !kinds.contains(&NGLDataKind::Package) {
+            return Ok(());
         }
-        // Please use the dev shell if you don't want this horrible hack to run. :)
-        {
-            let mut continuation: Option<String> = None;
-            let mut found: Vec<String> = Vec::new();
 
-            loop {
-                let mut url = String::from("https://nix-releases.s3.amazonaws.com/?list-type=2&prefix=nixpkgs/");
-                if let Some(token) = &continuation {
-                    let enc = urlencoding::encode(token);
-                    url.push_str(&format!("&continuation-token={}", enc));
+        let release = if let Ok(r) = std::env::var("NGL_NIXPKGS_RELEASE") {
+            r
+        } else {
+            self.discover_release().await?
+        };
+
+        self.fetch_packages_for_release(sink, release).await
+    }
+}
+
+impl NixPkgs {
+    async fn discover_release(&self) -> Result<String, DbErr> {
+        let mut continuation: Option<String> = None;
+        let mut found: Vec<String> = Vec::new();
+
+        loop {
+            let mut url = String::from("https://nix-releases.s3.amazonaws.com/?list-type=2&prefix=nixpkgs/");
+            if let Some(token) = &continuation {
+                let enc = urlencoding::encode(token);
+                url.push_str(&format!("&continuation-token={}", enc));
+            }
+
+            let resp = match reqwest::get(&url).await {
+                Ok(r) if r.status().is_success() => r,
+                Ok(r) => {
+                    return Err(DbErr::Custom(format!("unexpected status {} when listing S3", r.status())));
                 }
+                Err(e) => {
+                    return Err(DbErr::Custom(format!("http s3 list error: {}", e)));
+                }
+            };
 
-                let resp = match reqwest::get(&url).await {
-                    Ok(r) if r.status().is_success() => r,
-                    Ok(r) => {
-                        eprintln!("unexpected status {} when listing S3 via HTTP", r.status());
-                        break;
-                    }
-                    Err(e) => {
-                        eprintln!("http s3 list error: {}", e);
-                        break;
-                    }
-                };
+            let body = resp.text().await.map_err(|e| DbErr::Custom(e.to_string()))?;
 
-                let body = match resp.text().await {
-                    Ok(t) => t,
-                    Err(e) => {
-                        eprintln!("failed to read s3 list body: {}", e);
-                        break;
-                    }
-                };
-
-                let key_re = regex::Regex::new(r#"<Key>([^<]+)</Key>"#).unwrap();
-                for cap in key_re.captures_iter(&body) {
-                    let key = cap.get(1).unwrap().as_str();
-                    if key.ends_with("/packages.json.br") {
-                        if let Some(cap2) = regex::Regex::new(r#"^nixpkgs/([^/]+)/packages.json.br$"#).unwrap().captures(key) {
-                            if let Some(m) = cap2.get(1) {
-                                found.push(m.as_str().to_string());
-                            }
+            let key_re = regex::Regex::new(r#"<Key>([^<]+)</Key>"#).unwrap();
+            for cap in key_re.captures_iter(&body) {
+                let key = cap.get(1).unwrap().as_str();
+                if key.ends_with("/packages.json.br") {
+                    if let Some(cap2) = regex::Regex::new(r#"^nixpkgs/([^/]+)/packages.json.br$"#).unwrap().captures(key) {
+                        if let Some(m) = cap2.get(1) {
+                            found.push(m.as_str().to_string());
                         }
                     }
                 }
-
-                let next_re = regex::Regex::new(r#"<NextContinuationToken>([^<]+)</NextContinuationToken>"#).unwrap();
-                if let Some(cap) = next_re.captures(&body) {
-                    continuation = Some(cap.get(1).unwrap().as_str().to_string());
-                } else {
-                    break;
-                }
             }
 
-            if !found.is_empty() {
-                found.sort();
-                let release = found.pop().unwrap();
-                println!("nixpkgs: selected release (from S3-http) {}", release);
-                return self.fetch_packages_for_release(release).await;
+            let next_re = regex::Regex::new(r#"<NextContinuationToken>([^<]+)</NextContinuationToken>"#).unwrap();
+            if let Some(cap) = next_re.captures(&body) {
+                continuation = Some(cap.get(1).unwrap().as_str().to_string());
             } else {
-                eprintln!("HTTP S3 ListObjectsV2 did not find packages.json.br; falling back to XML index");
+                break;
             }
         }
 
+        if !found.is_empty() {
+            found.sort();
+            return Ok(found.pop().unwrap());
+        }
+
         let s3_index = "https://nix-releases.s3.amazonaws.com/?prefix=nixpkgs/&delimiter=/";
-        let body = match reqwest::get(s3_index).await {
-            Ok(r) if r.status().is_success() => match r.text().await {
-                Ok(t) => t,
-                Err(e) => {
-                    eprintln!("failed to read S3 index body: {}", e);
-                    return vec![];
-                }
-            },
-            Ok(r) => {
-                eprintln!("unexpected status {} fetching {}", r.status(), s3_index);
-                return vec![];
-            }
-            Err(e) => {
-                eprintln!("failed to fetch S3 index: {}", e);
-                return vec![];
-            }
-        };
+        let body = reqwest::get(s3_index)
+            .await
+            .map_err(|e| DbErr::Custom(e.to_string()))?
+            .text()
+            .await
+            .map_err(|e| DbErr::Custom(e.to_string()))?;
+
         let key_re = regex::Regex::new(r#"<Key>(nixpkgs/([^<]+?)/packages.json.br)</Key>"#).unwrap();
         let mut candidate_releases: Vec<String> = key_re
             .captures_iter(&body)
@@ -117,133 +107,82 @@ impl Provider for NixPkgs {
 
         if !candidate_releases.is_empty() {
             candidate_releases.sort();
-            let release = candidate_releases.pop().unwrap();
-            println!("nixpkgs: selected release (from packages.json.br keys) {}", release);
-            return self.fetch_packages_for_release(release).await;
+            return Ok(candidate_releases.pop().unwrap());
         }
 
         let re = regex::Regex::new(r#"<Prefix>(nixpkgs/[^<]+/)</Prefix>"#).unwrap();
-        let mut prefixes: Vec<String> = re
+        let mut releases: Vec<String> = re
             .captures_iter(&body)
-            .filter_map(|cap| cap.get(1).map(|m| m.as_str().to_string()))
+            .filter_map(|cap| cap.get(1).map(|m| m.as_str().trim_end_matches('/').trim_start_matches("nixpkgs/").to_string()))
             .collect();
 
-        if prefixes.is_empty() {
-            eprintln!("failed to discover nixpkgs release prefixes from S3 index");
-            return vec![];
+        if releases.is_empty() {
+            return Err(DbErr::Custom("failed to discover nixpkgs release".to_string()));
         }
 
-        let mut releases: Vec<String> = prefixes
-            .into_iter()
-            .map(|p| p.trim_end_matches('/').trim_start_matches("nixpkgs/").to_string())
-            .collect();
-
         releases.sort();
-        let release = releases.pop().unwrap();
-        println!("nixpkgs: selected release (from prefixes) {}", release);
-
-        return self.fetch_packages_for_release(release).await;
+        Ok(releases.pop().unwrap())
     }
-}
 
-impl NixPkgs {
     async fn fetch_packages_for_release(
-        &mut self,
+        &self,
+        sink: Arc<dyn Sink>,
         release: String,
-    ) -> Vec<crate::db::entities::package::ActiveModel> {
+    ) -> Result<(), DbErr> {
         let rel = release.trim_start_matches("nixpkgs/");
         let url = format!(
             "https://releases.nixos.org/nixpkgs/{}/packages.json.br",
             rel
         );
 
-        let resp = match reqwest::get(&url).await {
-            Ok(r) if r.status().is_success() => r,
-            Ok(r) => {
-                eprintln!("unexpected http status {} when fetching {}", r.status(), url);
-                return vec![];
-            }
-            Err(e) => {
-                eprintln!("request error fetching nixpkgs packages: {}", e);
-                return vec![];
-            }
-        };
+        let resp = reqwest::get(&url)
+            .await
+            .map_err(|e| DbErr::Custom(e.to_string()))?;
 
-        let bytes = match resp.bytes().await {
-            Ok(b) => b,
-            Err(e) => {
-                eprintln!("failed to read response bytes: {}", e);
-                return vec![];
-            }
-        };
-
-        eprintln!("downloaded {} bytes for {}", bytes.len(), url);
-        let prefix_len = std::cmp::min(16, bytes.len());
-        if prefix_len > 0 {
-            let mut s = String::new();
-            for b in &bytes[..prefix_len] {
-                s.push_str(&format!("{:02x}", b));
-            }
-            eprintln!("first {} bytes (hex): {}", prefix_len, s);
+        if !resp.status().is_success() {
+            return Err(DbErr::Custom(format!("unexpected http status {}", resp.status())));
         }
 
+        let bytes = resp.bytes().await.map_err(|e| DbErr::Custom(e.to_string()))?;
+
         let decompressed = if bytes.first().map(|b| *b) == Some(b'{') {
-            match String::from_utf8(bytes.to_vec()) {
-                Ok(s) => s,
-                Err(e) => {
-                    eprintln!("utf8 decode error: {}", e);
-                    return vec![];
-                }
-            }
+            String::from_utf8(bytes.to_vec()).map_err(|e| DbErr::Custom(e.to_string()))?
         } else {
             let cursor = std::io::Cursor::new(bytes);
             let mut decoder = BrotliDecoder::new(cursor);
-
             let mut s = String::new();
-            if let Err(e) = std::io::Read::read_to_string(&mut decoder, &mut s) {
-                eprintln!("brotli decompress error: {}", e);
-                return vec![];
-            }
+            std::io::Read::read_to_string(&mut decoder, &mut s)
+                .map_err(|e| DbErr::Custom(e.to_string()))?;
             s
         };
 
-        let json: serde_json::Value = match serde_json::from_str(&decompressed) {
-            Ok(j) => j,
-            Err(e) => {
-                eprintln!("failed to parse packages.json: {}", e);
-                return vec![];
-            }
-        };
+        let json: serde_json::Value =
+            serde_json::from_str(&decompressed).map_err(|e| DbErr::Custom(e.to_string()))?;
 
-        let packages = match json.get("packages") {
-            Some(p) if p.is_object() => p.as_object().unwrap(),
-            _ => {
-                eprintln!("packages.json missing 'packages' object");
-                return vec![];
-            }
-        };
+        let packages = json
+            .get("packages")
+            .and_then(|p| p.as_object())
+            .ok_or_else(|| DbErr::Custom("packages.json missing 'packages' object".to_string()))?;
 
-        let mut out = Vec::new();
         for (name, pkg_value) in packages.iter() {
-            let version = pkg_value.get("version").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let version = pkg_value
+                .get("version")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
 
-            let data = match serde_json::to_string(pkg_value) {
-                Ok(s) => s,
-                Err(_) => continue,
-            };
+            let data = serde_json::to_string(pkg_value).unwrap_or_default();
 
-            let model = crate::db::entities::package::ActiveModel {
+            sink.emit(ProviderEvent::Package(crate::db::entities::package::ActiveModel {
                 id: NotSet,
                 provider_name: Set("nixpkgs".to_string()),
                 name: Set(name.clone()),
                 version: Set(version),
                 format: Set(crate::db::enums::documentation_format::DocumentationFormat::PlainText),
                 data: Set(data),
-            };
-
-            out.push(model);
+            }))
+            .await?;
         }
 
-        out
+        Ok(())
     }
 }
