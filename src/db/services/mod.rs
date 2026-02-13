@@ -261,7 +261,12 @@ async fn fetch_package(db: &DatabaseConnection, id: i32) -> Result<NGLData, DbEr
         data: NGLDataVariant::Package(PackageData {
             name: model.name,
             version: model.version,
-            description: Some(model.data),
+            description: model.description,
+            homepage: model.homepage,
+            license: model.license,
+            source_code_url: model.source_code_url,
+            broken: model.broken,
+            unfree: model.unfree,
         }),
     })
 }

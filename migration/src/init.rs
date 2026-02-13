@@ -148,6 +148,12 @@ impl MigrationTrait for Migration {
                     .col(string_null(Package::Version))
                     .col(string(Package::Format))
                     .col(string(Package::Data))
+                    .col(string_null(Package::Description))
+                    .col(string_null(Package::Homepage))
+                    .col(string_null(Package::License))
+                    .col(string_null(Package::SourceCodeUrl))
+                    .col(boolean(Package::Broken))
+                    .col(boolean(Package::Unfree))
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk-package-provider")
@@ -332,6 +338,12 @@ enum Package {
     Version,
     Format,
     Data,
+    Description,
+    Homepage,
+    License,
+    SourceCodeUrl,
+    Broken,
+    Unfree,
 }
 
 #[derive(DeriveIden)]

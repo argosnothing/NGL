@@ -170,6 +170,68 @@ impl NixPkgs {
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
 
+            let meta = pkg_value.get("meta");
+
+            let description = meta
+                .and_then(|m| m.get("description"))
+                .and_then(|d| d.as_str())
+                .map(|s| s.to_string());
+
+            let homepage = meta
+                .and_then(|m| m.get("homepage"))
+                .and_then(|h| {
+                    if let Some(s) = h.as_str() {
+                        Some(s.to_string())
+                    } else if let Some(arr) = h.as_array() {
+                        arr.first().and_then(|v| v.as_str()).map(|s| s.to_string())
+                    } else {
+                        None
+                    }
+                });
+
+            let license = meta
+                .and_then(|m| m.get("license"))
+                .and_then(|l| {
+                    if let Some(s) = l.as_str() {
+                        Some(s.to_string())
+                    } else if let Some(obj) = l.as_object() {
+                        obj.get("spdxId").or(obj.get("fullName")).and_then(|v| v.as_str()).map(|s| s.to_string())
+                    } else if let Some(arr) = l.as_array() {
+                        arr.first().and_then(|v| {
+                            if let Some(s) = v.as_str() {
+                                Some(s.to_string())
+                            } else if let Some(obj) = v.as_object() {
+                                obj.get("spdxId").or(obj.get("fullName")).and_then(|x| x.as_str()).map(|s| s.to_string())
+                            } else {
+                                None
+                            }
+                        })
+                    } else {
+                        None
+                    }
+                });
+
+            let position = meta
+                .and_then(|m| m.get("position"))
+                .and_then(|p| p.as_str());
+
+            let source_code_url = position.map(|pos| {
+                let parts: Vec<&str> = pos.splitn(2, ':').collect();
+                let file = parts.first().unwrap_or(&"");
+                let line = parts.get(1).unwrap_or(&"1");
+                format!("https://github.com/NixOS/nixpkgs/blob/master/{}#L{}", file, line)
+            });
+
+            let broken = meta
+                .and_then(|m| m.get("broken"))
+                .and_then(|b| b.as_bool())
+                .unwrap_or(false);
+
+            let unfree = meta
+                .and_then(|m| m.get("unfree"))
+                .and_then(|u| u.as_bool())
+                .unwrap_or(false);
+
             let data = serde_json::to_string(pkg_value).unwrap_or_default();
 
             sink.emit(ProviderEvent::Package(crate::db::entities::package::ActiveModel {
@@ -179,6 +241,12 @@ impl NixPkgs {
                 version: Set(version),
                 format: Set(crate::db::enums::documentation_format::DocumentationFormat::PlainText),
                 data: Set(data),
+                description: Set(description),
+                homepage: Set(homepage),
+                license: Set(license),
+                source_code_url: Set(source_code_url),
+                broken: Set(broken),
+                unfree: Set(unfree),
             }))
             .await?;
         }

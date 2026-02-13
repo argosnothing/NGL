@@ -87,6 +87,11 @@ pub struct PackageData {
     pub name: String,
     pub version: Option<String>,
     pub description: Option<String>,
+    pub homepage: Option<String>,
+    pub license: Option<String>,
+    pub source_code_url: Option<String>,
+    pub broken: bool,
+    pub unfree: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

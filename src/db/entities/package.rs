@@ -16,6 +16,12 @@ pub struct Model {
     pub version: Option<String>,
     pub format: DocumentationFormat,
     pub data: String,
+    pub description: Option<String>,
+    pub homepage: Option<String>,
+    pub license: Option<String>,
+    pub source_code_url: Option<String>,
+    pub broken: bool,
+    pub unfree: bool,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
