@@ -4,6 +4,10 @@ Feel free to open PR's for any of these todos
 
 In no particular order...  
 - Implement Providers (Global!!! Meaning we need as much data as possible!!!! MORE MORE MORE)
+- NGL lifetime. Have a daemon or some systemd service maybe? Maybe overkill? hmm. 
+- NGL cli -> returns json
+  - Support for: manual sync, xyz provider
+  - Query with: kinds[], providers[], search term
 - Config file
 - Modularity... Currently NGL is one crate, maybe this is how we'll do it, but one idea would be to investigate ways to decouple providers from
   NGL code they should not care about. For example, instead of a ProviderEvent wrapping a seo_orm model, wrap a publically facing Domain model that NGL will then map onto the sea_orm model. 
