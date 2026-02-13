@@ -1,0 +1,16 @@
+{
+  "template_providers": [
+    {
+      "template": "renderdocs",
+      "name": "plasma-manager",
+      "source": "https://nix-community.github.io/plasma-manager/options.xhtml",
+      "kinds": ["option"]
+    },
+    {
+      "template": "renderdocs",
+      "name": "home-manager",
+      "source": "https://nix-community.github.io/home-manager/options.xhtml",
+      "kinds": ["option"]
+    }
+  ]
+}

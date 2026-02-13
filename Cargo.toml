@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
-default = ["noogle", "nixpkgs"]
+default = ["noogle"]
 noogle = []
 nixpkgs = ["dep:brotli2", "dep:regex", "dep:aws-config", "dep:aws-sdk-s3"]
 
@@ -29,3 +29,4 @@ aws-sdk-s3 = { version = "1.8", optional = true }
 
 urlencoding = "2.1"
 strum_macros = "0.27.2"
+scraper = "0.22"

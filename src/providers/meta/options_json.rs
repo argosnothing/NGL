@@ -1,0 +1,138 @@
+use crate::db::entities::option as option_entity;
+use crate::db::enums::documentation_format::DocumentationFormat;
+use crate::providers::{Provider, ProviderEvent, ProviderInformation, Sink};
+use crate::schema::NGLDataKind;
+use async_trait::async_trait;
+use sea_orm::ActiveValue::*;
+use sea_orm::DbErr;
+use serde::Deserialize;
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use super::{fetch_source, TemplateProviderConfig};
+
+pub struct OptionsJsonProvider {
+    name: String,
+    source: String,
+    kinds: Vec<NGLDataKind>,
+}
+
+impl OptionsJsonProvider {
+    pub fn new(name: String, source: String, kinds: Vec<NGLDataKind>) -> Self {
+        Self { name, source, kinds }
+    }
+
+    pub fn from_config(cfg: &TemplateProviderConfig) -> Self {
+        let kinds = cfg
+            .kinds
+            .iter()
+            .filter_map(|k| match k.to_lowercase().as_str() {
+                "option" | "options" => Some(NGLDataKind::Option),
+                _ => {
+                    eprintln!("Warning: options_json only supports 'option' kind, got '{}'", k);
+                    None
+                }
+            })
+            .collect();
+
+        Self::new(cfg.name.clone(), cfg.source.clone(), kinds)
+    }
+
+    async fn parse_options(&self, sink: Arc<dyn Sink>) -> Result<(), DbErr> {
+        let json_str = fetch_source(&self.source)
+            .await
+            .map_err(|e| DbErr::Custom(format!("Failed to fetch source: {}", e)))?;
+
+        let options: HashMap<String, OptionEntry> = serde_json::from_str(&json_str)
+            .map_err(|e| DbErr::Custom(format!("Failed to parse options.json: {}", e)))?;
+
+        for (name, opt) in options {
+            let default_value = opt.default.as_ref().map(|d| {
+                if let Some(text) = d.text() {
+                    text.clone()
+                } else {
+                    serde_json::to_string(d).unwrap_or_default()
+                }
+            });
+
+            let data = serde_json::to_string(&opt).unwrap_or_default();
+
+            sink.emit(ProviderEvent::Option(option_entity::ActiveModel {
+                id: NotSet,
+                provider_name: Set(self.name.clone()),
+                name: Set(name.clone()),
+                type_signature: Set(opt.option_type),
+                default_value: Set(default_value),
+                format: Set(DocumentationFormat::Markdown),
+                data: Set(data),
+            }))
+            .await?;
+        }
+
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl Provider for OptionsJsonProvider {
+    fn get_info(&self) -> ProviderInformation {
+        ProviderInformation {
+            kinds: self.kinds.clone(),
+            name: self.name.clone(),
+            source: self.source.clone(),
+        }
+    }
+
+    async fn sync(&mut self, sink: Arc<dyn Sink>, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
+        if kinds.contains(&NGLDataKind::Option) && self.kinds.contains(&NGLDataKind::Option) {
+            self.parse_options(sink).await?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Deserialize, serde::Serialize)]
+pub struct OptionEntry {
+    #[serde(rename = "type")]
+    pub option_type: Option<String>,
+    
+    pub description: Option<String>,
+    
+    #[serde(rename = "default")]
+    pub default: Option<OptionValue>,
+    
+    pub example: Option<OptionValue>,
+    
+    pub declarations: Option<Vec<serde_json::Value>>,
+    
+    #[serde(rename = "readOnly")]
+    pub read_only: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum OptionValue {
+    Text { text: Option<String> },
+    Raw(serde_json::Value),
+}
+
+impl OptionValue {
+    pub fn text(&self) -> Option<&String> {
+        match self {
+            OptionValue::Text { text } => text.as_ref(),
+            OptionValue::Raw(_) => None,
+        }
+    }
+}
+
+impl serde::Serialize for OptionValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            OptionValue::Text { text } => text.serialize(serializer),
+            OptionValue::Raw(v) => v.serialize(serializer),
+        }
+    }
+}

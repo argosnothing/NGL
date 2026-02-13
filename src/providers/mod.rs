@@ -12,6 +12,7 @@ mod sink;
 pub use sink::{DbSink, ProviderEvent, Sink};
 
 pub mod hjem_docs;
+pub mod meta;
 
 #[cfg(feature = "nixpkgs")]
 pub mod nixpkgs;
