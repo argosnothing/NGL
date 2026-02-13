@@ -23,23 +23,7 @@ impl Provider for NixPkgs {
             source: "https://releases.nixos.org/nixpkgs/".to_string(),
         }
     }
-
-    async fn fetch_functions(&mut self) -> Vec<crate::db::entities::function::ActiveModel> {
-        vec![]
-    }
-
-    async fn fetch_examples(&mut self) -> Vec<crate::db::example::ActiveModel> {
-        vec![]
-    }
-
-    async fn fetch_guides(&mut self) -> Vec<crate::db::entities::guide::ActiveModel> {
-        vec![]
-    }
-
-    async fn fetch_options(&mut self) -> Vec<crate::db::entities::option::ActiveModel> {
-        vec![]
-    }
-
+    
     async fn fetch_packages(&mut self) -> Vec<crate::db::entities::package::ActiveModel> {
         if let Ok(release) = std::env::var("NGL_NIXPKGS_RELEASE") {
             return self.fetch_packages_for_release(release).await;

@@ -48,22 +48,34 @@ pub trait Provider {
     fn get_info(&self) -> ProviderInformation;
 
     /// Fetch functions from this provider. Return empty vec if not supported.
-    async fn fetch_functions(&mut self) -> Vec<function::ActiveModel>;
+    async fn fetch_functions(&mut self) -> Vec<function::ActiveModel> {
+        Vec::new()
+    }
 
     /// Fetch examples from this provider. Return empty vec if not supported.
-    async fn fetch_examples(&mut self) -> Vec<example::ActiveModel>;
+    async fn fetch_examples(&mut self) -> Vec<example::ActiveModel> {
+        Vec::new()
+    }
 
     /// Fetch guides from this provider. Return empty vec if not supported.
-    async fn fetch_guides(&mut self) -> Vec<guide::ActiveModel>;
+    async fn fetch_guides(&mut self) -> Vec<guide::ActiveModel> {
+        Vec::new()
+    }
 
     /// Fetch options from this provider. Return empty vec if not supported.
-    async fn fetch_options(&mut self) -> Vec<option::ActiveModel>;
+    async fn fetch_options(&mut self) -> Vec<option::ActiveModel> {
+        Vec::new()
+    }
 
     /// Fetch packages from this provider. Return empty vec if not supported.
-    async fn fetch_packages(&mut self) -> Vec<package::ActiveModel>;
+    async fn fetch_packages(&mut self) -> Vec<package::ActiveModel> {
+        Vec::new()
+    }
 
     /// Fetch types from this provider. Return empty vec if not supported.
-    async fn fetch_types(&mut self) -> Vec<r#type::ActiveModel>;
+    async fn fetch_types(&mut self) -> Vec<r#type::ActiveModel> {
+        Vec::new()
+    }
 
     /// This is where the provider inserts their data into the database using the sources.
     /// A provider is responsible for:
