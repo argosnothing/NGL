@@ -92,6 +92,12 @@ pub trait Provider {
             .as_ref()
             .ok_or_else(|| DbErr::Custom("No kinds specified in request".to_string()))?;
 
+        // TODO: (Bounty)
+        // The limitation of doing it like this is that if a provider supports more than one kind,
+        // The provider will need a way to store state across fetches, meaning that memory will live until the provider is
+        // completely done syncing. 
+        // A better way to do this would be some kind of event system, where the provider can emit events as they fetch data, and maybe the provider trait can
+        // handle those events.
         for kind in kinds {
             match kind {
                 NGLDataKind::Function => {

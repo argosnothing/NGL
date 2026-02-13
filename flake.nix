@@ -57,7 +57,9 @@
           RUST_SRC_PATH = "${rustToolchain}/lib/rustlib/src/rust/library";
 
           shellHook = ''
+
             export DATABASE_URL="sqlite://ngl.db?mode=rwc"
+            export NGL_NIXPKGS_RELEASE="nixpkgs-26.05pre944764.2343bbb58f99"
 
             echo "NGL development environment"
             echo "Rust version: $(rustc --version)"

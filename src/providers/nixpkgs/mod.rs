@@ -8,6 +8,7 @@ use sea_orm::ActiveValue::*;
 
 pub struct NixPkgs {}
 
+/// Ideally we would have this work with streams if possible, so we don't flood memory.
 impl NixPkgs {
     pub fn new() -> Self {
         Self {}
@@ -28,6 +29,7 @@ impl Provider for NixPkgs {
         if let Ok(release) = std::env::var("NGL_NIXPKGS_RELEASE") {
             return self.fetch_packages_for_release(release).await;
         }
+        // Please use the dev shell if you don't want this horrible hack to run. :)
         {
             let mut continuation: Option<String> = None;
             let mut found: Vec<String> = Vec::new();
@@ -141,10 +143,6 @@ impl Provider for NixPkgs {
         println!("nixpkgs: selected release (from prefixes) {}", release);
 
         return self.fetch_packages_for_release(release).await;
-    }
-
-    async fn fetch_types(&mut self) -> Vec<crate::db::entities::r#type::ActiveModel> {
-        vec![]
     }
 }
 
