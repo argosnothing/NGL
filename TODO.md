@@ -1,15 +1,14 @@
 # TODO
 Feel free to open PR's for any of these todos
 
-1. Implement Providers
-2. Data querying. NGL is going to likely contain a massive amount of data, meaning that data needs some way of being sorted, special indexing, etc.
-   A NGLRequest should likely include with it some number that represents what section of data it is trying to get and it's own data limit for entries.
-   Say you make a query to NGL with no filters, you are querying the entire db. This should not be done as a single response, so we would need that
-   NGLRequests to have an index for what part of the response it is trying to get.
-   Meaning the retrieval should only send a bit of that data. 
-   Streaming would be the ideal way to do this, the issue, is many apis just provide a single endpoint block of data, so there is no
-   reason to stream that. HMM!
-3. Implement Meta Providers that makes it easier to work with similar kinds of sources(?)
+
+In no particular order...  
+- Implement Providers (Global!!! Meaning we need as much data as possible!!!! MORE MORE MORE)
+- Config file
+- Modularity... Currently NGL is one crate, maybe this is how we'll do it, but one idea would be to investigate ways to decouple providers from
+  NGL code they should not care about. For example, instead of a ProviderEvent wrapping a seo_orm model, wrap a publically facing Domain model that NGL will then map onto the sea_orm model. 
+  - In line with this investigate ways to have NGL providers as separate plugins, crates, somehow. They would have NGL as a dependency to manage their state maybe?? For example, lets say you only care about the noogle provider. NGL currently only syncs kinds of data you care about, but the over providers and their own dependencies are in the same crate, could there be a flag we could run to say we want "everything" or we want xyz provider, and it'd only compile code that that provider/s uses?
+- Implement Meta Providers that makes it easier to work with similar kinds of sources
    Got this idea looking through nix-search-tv docu on an experimental feature they have under the experimental option.
    This could also take the form of having a kind of meta provider that reads a config file for urls that have that meta provider as it's provider
    Say we have a format that we know several sources take for the shape of their data, we would add a config file that connects to some
@@ -23,6 +22,8 @@ Feel free to open PR's for any of these todos
     ```
    that those providers can get their provider information from for each found instance. 
    would use, so for each provider in that config, we'd instantiate a new provider to deal with that data.
-4. Either add a CLAP cli in the library (ideal for testing) or work on another cli frontend for easier examples on query NGL
-5. Implement a NGL frontend, although this would likely be a diff repo.
+- Schema configs. Having some way to rapidly write out mappings of json key -> vals to NGL data structures and generate new meta providers
+  Could be very powerful for covering a ton of similar data, like blogs, etc. 
+- Either add a CLAP cli in the library (ideal for testing) or work on another cli frontend for easier examples on query NGL
+- Implement a NGL frontend, although this would likely be a diff repo.
    
