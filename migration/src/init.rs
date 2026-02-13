@@ -82,6 +82,9 @@ impl MigrationTrait for Migration {
                     .col(string_null(Function::Signature))
                     .col(string(Function::Format))
                     .col(string(Function::Data))
+                    .col(string_null(Function::SourceUrl))
+                    .col(string_null(Function::SourceCodeUrl))
+                    .col(string_null(Function::Aliases))
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk-function-provider")
@@ -287,6 +290,9 @@ enum Function {
     ProviderName,
     Format,
     Data,
+    SourceUrl,
+    SourceCodeUrl,
+    Aliases,
 }
 
 #[derive(DeriveIden)]

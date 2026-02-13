@@ -41,6 +41,12 @@ pub struct FunctionData {
     /// This is the body of the documentation
     /// Examples will likely be nested in here
     pub content: NGLRaw,
+    /// URL to the documentation page (e.g., noogle.dev page)
+    pub source_url: Option<String>,
+    /// URL to the source code with line position
+    pub source_code_url: Option<String>,
+    /// Alternative names for this function (JSON array as string)
+    pub aliases: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

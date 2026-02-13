@@ -187,6 +187,9 @@ async fn fetch_function(db: &DatabaseConnection, id: i32) -> Result<NGLData, DbE
             name: model.name,
             signature: model.signature,
             content,
+            source_url: model.source_url,
+            source_code_url: model.source_code_url,
+            aliases: model.aliases.and_then(|s| serde_json::from_str(&s).ok()),
         }),
     })
 }

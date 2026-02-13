@@ -16,6 +16,9 @@ pub struct Model {
     pub signature: Option<String>,
     pub provider_name: String,
     pub data: String,
+    pub source_url: Option<String>,
+    pub source_code_url: Option<String>,
+    pub aliases: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

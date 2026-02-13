@@ -43,6 +43,7 @@ impl Provider for Noogle {
 
         let fetch_functions = kinds.contains(&NGLDataKind::Function);
         let fetch_examples = kinds.contains(&NGLDataKind::Example);
+        let upstream_rev = response.upstream_info.rev.clone();
 
         for doc in response.data {
             let content = doc
@@ -53,6 +54,26 @@ impl Provider for Noogle {
                 .unwrap_or_default();
 
             if fetch_functions {
+                let source_url = Some(format!(
+                    "https://noogle.dev/f/{}",
+                    doc.meta.path.join("/")
+                ));
+
+                let source_code_url = doc.meta.attr_position.as_ref().map(|pos| {
+                    format!(
+                        "https://github.com/NixOS/nixpkgs/blob/{}/{}#L{}",
+                        upstream_rev,
+                        pos.file,
+                        pos.line
+                    )
+                });
+
+                let aliases = doc.meta.aliases.as_ref().map(|a| {
+                    serde_json::to_string(
+                        &a.iter().map(|parts| parts.join(".")).collect::<Vec<_>>()
+                    ).unwrap_or_default()
+                });
+
                 sink.emit(ProviderEvent::Function(function::ActiveModel {
                     id: NotSet,
                     name: Set(doc.meta.title.clone()),
@@ -60,6 +81,9 @@ impl Provider for Noogle {
                     format: Set(DocumentationFormat::Markdown),
                     signature: Set(doc.meta.signature.clone()),
                     data: Set(content.clone()),
+                    source_url: Set(source_url),
+                    source_code_url: Set(source_code_url),
+                    aliases: Set(aliases),
                 }))
                 .await?;
             }
