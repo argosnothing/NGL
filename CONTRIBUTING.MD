@@ -6,10 +6,11 @@ Early on, the [schema](./src/schema.rs) is going to be up in the air, as more pr
 ## Writing a Provider  
 Providers are what connects a source of information (api, website, etc) to the NGL database.
 
+By implementing the `Provider` trait, you will have access to a method that lets you put events in a sync to insert into the NGL database. 
+
 The task of the provider is to: 
 1. Decide, and declare what kinds of data it *can* reliably parse into NGLEntityData models.
 2. take the raw information from the documentation source, using its own schema.
-3. Use the current request to decide *what* information
 3. convert the providers local schema into the databases schema for that kind of data
 
 After implementing the provider you will need to add a new instance of the provider to the providers vec in the [registry](./src/registry.rs)
