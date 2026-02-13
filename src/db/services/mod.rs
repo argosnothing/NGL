@@ -21,7 +21,20 @@ pub async fn insert<T>(db: &DatabaseConnection, models: Vec<T>) -> Result<(), Db
 where
     T: NGLDataEntity,
 {
-    T::Entity::insert_many(models).exec(db).await?;
+    // SQLite has a limit on the number of SQL variables per statement (commonly 999).
+    // Insert in chunks to avoid exceeding that limit when inserting many rows.
+    let mut remaining = models;
+    const CHUNK_SIZE: usize = 150;
+    while !remaining.is_empty() {
+        let split_at = if remaining.len() > CHUNK_SIZE {
+            remaining.len() - CHUNK_SIZE
+        } else {
+            0
+        };
+        let chunk = remaining.split_off(split_at);
+        T::Entity::insert_many(chunk).exec(db).await?;
+    }
+
     Ok(())
 }
 
@@ -68,10 +81,11 @@ pub async fn populate_fts5(db: &DatabaseConnection) -> Result<(), DbErr> {
     db.execute(Statement::from_string(
         db.get_database_backend(),
         "INSERT INTO ngl_search (entity_id, kind, provider_name, title, content)
-         SELECT id, 'Package', provider_name, name, data FROM packages"
+         SELECT id, 'Package', provider_name, name, name FROM packages"
             .to_owned(),
     ))
     .await?;
+
 
     db.execute(Statement::from_string(
         db.get_database_backend(),

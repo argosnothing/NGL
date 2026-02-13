@@ -1,5 +1,5 @@
 use crate::{
-    providers::{Provider, noogle::Noogle},
+    providers::{Provider, noogle::Noogle, nixpkgs::NixPkgs},
     schema::NGLRequest,
 };
 use futures::future::join_all;
@@ -12,39 +12,34 @@ impl ProviderRegistry {
     /// If no kinds are specified in the request, all providers are synced.
     /// Otherwise, only providers that support the requested kinds are synced.
     pub async fn sync(db: &DatabaseConnection, request: NGLRequest) -> Result<(), DbErr> {
-        let providers: Vec<Box<dyn Provider + Send>> = vec![Box::new(Noogle::new())];
+        let providers: Vec<Box<dyn Provider + Send>> = vec![
+            Box::new(Noogle::new()),
+            Box::new(NixPkgs::new()),
+        ];
 
         let sync_futures: Vec<_> = providers
             .into_iter()
-            .filter_map(|mut provider| {
-                let should_sync = match &request.kinds {
-                    None => true,
-                    Some(requested_kinds) => {
-                        let info = provider.get_info();
-                        requested_kinds.iter().any(|k| info.kinds.contains(k))
-                    }
-                };
-
-                if should_sync {
-                    let request_clone = request.clone();
-                    let db_clone = db.clone();
-                    Some(async move { provider.sync(&db_clone, request_clone).await })
-                } else {
-                    None
-                }
+            .map(|mut provider| {
+            let request_clone = request.clone();
+            let db_clone = db.clone();
+            async move { provider.sync(&db_clone, request_clone).await }
             })
             .collect();
 
-        if !sync_futures.is_empty() {
             let results = join_all(sync_futures).await;
 
+            let mut reindex = false;
             for result in results {
-                result?;
+                let synced = result?;
+                if synced {
+                    reindex = true;
+                }
             }
 
-            crate::db::services::populate_fts5(db).await?;
-        }
-
+            if reindex {
+                eprint!("Reindexing FTS5 tables...");
+                crate::db::services::populate_fts5(db).await?;
+            }
         Ok(())
     }
 }

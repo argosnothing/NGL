@@ -127,7 +127,7 @@ pub trait Provider {
     /// sync handles the logic around when a provider will and wont request from its source.
     /// Providers job is only to insert into the db when asked it to, which is when
     /// the fetch_and_insert function will be ran.
-    async fn sync(&mut self, db: &DatabaseConnection, request: NGLRequest) -> Result<(), DbErr> {
+    async fn sync(&mut self, db: &DatabaseConnection, request: NGLRequest) -> Result<bool, DbErr> {
         let requested_kinds = request
             .kinds
             .as_ref()
@@ -156,13 +156,14 @@ pub trait Provider {
             };
 
             if needs_sync {
+                println!("{} is Syncing data...", &info.name);
                 kinds_to_sync.push(kind.clone());
             }
         }
 
         if kinds_to_sync.is_empty() {
             println!("All requested kinds cached for {}", &info.name);
-            return Ok(());
+            return Ok(false);
         }
 
         let provider_model = provider::ActiveModel {
@@ -204,6 +205,6 @@ pub trait Provider {
                 .await?;
         }
 
-        Ok(())
+        Ok(true)
     }
 }
