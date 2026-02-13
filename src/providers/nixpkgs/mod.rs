@@ -3,14 +3,22 @@ use crate::providers::{Provider, ProviderEvent, Sink};
 use crate::schema::NGLDataKind;
 use async_trait::async_trait;
 use sea_orm::DbErr;
+use serde::de::{self, Deserializer, MapAccess, Visitor};
+use serde::Deserialize;
+use std::fmt;
+use std::io::Read;
 use std::sync::Arc;
-pub mod schema;
-
+use tokio::sync::mpsc;
 use brotli2::read::BrotliDecoder;
 use sea_orm::ActiveValue::*;
 
+pub mod schema;
+
 pub struct NixPkgs {}
 
+/// I had to do a lot of cursed things to prevent all the incoming data flooding ram, but it works
+/// pretty well considering how much data im having to work with, and it's not all happening
+/// in memory so that's what is important. 
 impl NixPkgs {
     pub fn new() -> Self {
         Self {}
@@ -32,6 +40,7 @@ impl Provider for NixPkgs {
             return Ok(());
         }
 
+        /// If you don't set that env var somewhere, you're going to have a bad time. 
         let release = if let Ok(r) = std::env::var("NGL_NIXPKGS_RELEASE") {
             r
         } else {
@@ -145,32 +154,35 @@ impl NixPkgs {
 
         let bytes = resp.bytes().await.map_err(|e| DbErr::Custom(e.to_string()))?;
 
-        let decompressed = if bytes.first().map(|b| *b) == Some(b'{') {
-            String::from_utf8(bytes.to_vec()).map_err(|e| DbErr::Custom(e.to_string()))?
-        } else {
-            let cursor = std::io::Cursor::new(bytes);
-            let mut decoder = BrotliDecoder::new(cursor);
-            let mut s = String::new();
-            std::io::Read::read_to_string(&mut decoder, &mut s)
-                .map_err(|e| DbErr::Custom(e.to_string()))?;
-            s
-        };
+        let (tx, mut rx) = mpsc::channel::<Result<(String, serde_json::Value), String>>(64);
 
-        let json: serde_json::Value =
-            serde_json::from_str(&decompressed).map_err(|e| DbErr::Custom(e.to_string()))?;
+        // TL;DR: We got the packages.json.br file, but we don't want to load the whole thing into memory and 
+        // parse it with serde_json, because it's huge. Instead, we spawn a blocking task to 
+        // stream-parse it with serde_json's Deserializer, sending each package through a channel as it's parsed. 
+        // This way we can start processing packages immediately without waiting for the entire file to be parsed, 
+        // and we never have more than one decompressed package in memory at a time.
+        let parse_handle = tokio::task::spawn_blocking(move || {
+            let reader: Box<dyn Read + Send> = if bytes.first().map(|b| *b) == Some(b'{') {
+                Box::new(std::io::Cursor::new(bytes))
+            } else {
+                let cursor = std::io::Cursor::new(bytes);
+                Box::new(BrotliDecoder::new(cursor))
+            };
 
-        let packages = json
-            .get("packages")
-            .and_then(|p| p.as_object())
-            .ok_or_else(|| DbErr::Custom("packages.json missing 'packages' object".to_string()))?;
+            if let Err(e) = stream_packages_to_channel(reader, tx) {
+                eprintln!("JSON parse error: {}", e);
+            }
+        });
 
-        for (name, pkg_value) in packages.iter() {
+        while let Some(result) = rx.recv().await {
+            let (name, pkg_value) = result.map_err(|e| DbErr::Custom(e))?;
+
+            let meta = pkg_value.get("meta");
+
             let version = pkg_value
                 .get("version")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
-
-            let meta = pkg_value.get("meta");
 
             let description = meta
                 .and_then(|m| m.get("description"))
@@ -232,12 +244,12 @@ impl NixPkgs {
                 .and_then(|u| u.as_bool())
                 .unwrap_or(false);
 
-            let data = serde_json::to_string(pkg_value).unwrap_or_default();
+            let data = serde_json::to_string(&pkg_value).unwrap_or_default();
 
             sink.emit(ProviderEvent::Package(crate::db::entities::package::ActiveModel {
                 id: NotSet,
                 provider_name: Set("nixpkgs".to_string()),
-                name: Set(name.clone()),
+                name: Set(name),
                 version: Set(version),
                 format: Set(crate::db::enums::documentation_format::DocumentationFormat::PlainText),
                 data: Set(data),
@@ -251,6 +263,82 @@ impl NixPkgs {
             .await?;
         }
 
+        parse_handle.await.map_err(|e| DbErr::Custom(e.to_string()))?;
+
         Ok(())
     }
+}
+
+// Warning: nonsense rust appeasement code ahead, make sense of it at own risk of insanity
+fn stream_packages_to_channel<R: Read>(
+    reader: R,
+    tx: mpsc::Sender<Result<(String, serde_json::Value), String>>,
+) -> Result<(), serde_json::Error> {
+    struct StreamingVisitor {
+        tx: mpsc::Sender<Result<(String, serde_json::Value), String>>,
+    }
+
+    impl<'de> Visitor<'de> for StreamingVisitor {
+        type Value = ();
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("a packages.json object with a 'packages' field")
+        }
+
+        fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            while let Some(key) = map.next_key::<String>()? {
+                if key == "packages" {
+                    map.next_value_seed(PackagesStreamSeed { tx: self.tx.clone() })?;
+                } else {
+                    map.next_value::<serde::de::IgnoredAny>()?;
+                }
+            }
+            Ok(())
+        }
+    }
+
+    struct PackagesStreamSeed {
+        tx: mpsc::Sender<Result<(String, serde_json::Value), String>>,
+    }
+
+    impl<'de> de::DeserializeSeed<'de> for PackagesStreamSeed {
+        type Value = ();
+
+        fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            deserializer.deserialize_map(PackagesStreamVisitor { tx: self.tx })
+        }
+    }
+
+    struct PackagesStreamVisitor {
+        tx: mpsc::Sender<Result<(String, serde_json::Value), String>>,
+    }
+
+    impl<'de> Visitor<'de> for PackagesStreamVisitor {
+        type Value = ();
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("a map of package names to package objects")
+        }
+
+        fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            while let Some((name, value)) = map.next_entry::<String, serde_json::Value>()? {
+                if self.tx.blocking_send(Ok((name, value))).is_err() {
+                    break;
+                }
+            }
+            Ok(())
+        }
+    }
+
+    let mut de = serde_json::Deserializer::from_reader(reader);
+    de.deserialize_map(StreamingVisitor { tx })
 }
