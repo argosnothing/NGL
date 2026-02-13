@@ -1,6 +1,7 @@
 // Base schema defining the language of NGL data structure
 // Defines components of an NGLRequest and an NGLResponse
 use serde::{Deserialize, Serialize};
+use strum_macros::Display;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NGLRequest {
@@ -88,7 +89,7 @@ pub struct TypeData {
     pub description: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display)]
 pub enum NGLDataKind {
     Function,
     Example,
@@ -125,7 +126,7 @@ impl NGLDataVariant {
             NGLDataVariant::Example(_) => NGLDataKind::Example,
             NGLDataVariant::Guide(_) => NGLDataKind::Guide,
             NGLDataVariant::Option(_) => NGLDataKind::Option,
-            NGLDataVariant::Package(_) => todo!(),
+            NGLDataVariant::Package(_) => NGLDataKind::Package,
             NGLDataVariant::Type(_) => NGLDataKind::Type,
         }
     }

@@ -168,7 +168,7 @@ pub trait Provider {
             };
 
             if needs_sync {
-                println!("{} is Syncing data...", &info.name);
+                println!("{} is Syncing data for {}", &info.name, &kind);
                 kinds_to_sync.push(kind.clone());
             }
         }
