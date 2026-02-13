@@ -9,7 +9,7 @@ Nix documentation is scattered across dozens of sources:
 - [search.nixos.org](https://search.nixos.org) for packages and options
 - [nixos.org](https://nixos.org) for guides and manuals
 - [home-manager](https://nix-community.github.io/home-manager/) documentation
-- Various community wikis and resources
+- many, many various community wikis and resources
 
 The information exists, but finding it means knowing which site to check and learning multiple different interfaces.
 

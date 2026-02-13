@@ -1,7 +1,11 @@
 use crate::{
-    providers::{Provider, noogle::Noogle, nixpkgs::NixPkgs},
+    providers::Provider,
     schema::NGLRequest,
 };
+#[cfg(feature = "noogle")]
+use crate::providers::noogle::Noogle;
+#[cfg(feature = "nixpkgs")]
+use crate::providers::nixpkgs::NixPkgs;
 use futures::future::join_all;
 use sea_orm::{DatabaseConnection, DbErr};
 
@@ -12,10 +16,13 @@ impl ProviderRegistry {
     /// If no kinds are specified in the request, all providers are synced.
     /// Otherwise, only providers that support the requested kinds are synced.
     pub async fn sync(db: &DatabaseConnection, request: NGLRequest) -> Result<(), DbErr> {
-        let providers: Vec<Box<dyn Provider + Send>> = vec![
-            Box::new(Noogle::new()),
-            Box::new(NixPkgs::new()),
-        ];
+        #[allow(unused_mut)]
+        let mut providers: Vec<Box<dyn Provider + Send>> = vec![];
+
+        #[cfg(feature = "noogle")]
+        providers.push(Box::new(Noogle::new()));
+        #[cfg(feature = "nixpkgs")]
+        providers.push(Box::new(NixPkgs::new()));
 
         let sync_futures: Vec<_> = providers
             .into_iter()

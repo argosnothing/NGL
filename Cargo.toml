@@ -3,6 +3,11 @@ name = "ngl"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = ["noogle", "nixpkgs"]
+noogle = []
+nixpkgs = ["dep:brotli2", "dep:regex", "dep:aws-config", "dep:aws-sdk-s3"]
+
 [dependencies]
 anyhow = "1.0.101"
 chrono = "0.4.43"
@@ -17,10 +22,10 @@ migration = { path = "migration" }
 pulldown-cmark = "0.13.0"
 async-trait = "0.1.89"
 futures = "0.3.31"
-brotli2 = "0.3.2"
-regex = "1.10"
-aws-config = "1.8"
-aws-sdk-s3 = "1.8"
+brotli2 = { version = "0.3.2", optional = true }
+regex = { version = "1.10", optional = true }
+aws-config = { version = "1.8", optional = true }
+aws-sdk-s3 = { version = "1.8", optional = true }
 
 urlencoding = "2.1"
 strum_macros = "0.27.2"

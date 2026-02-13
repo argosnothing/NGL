@@ -8,10 +8,15 @@ use sea_orm::{ActiveValue::Set, ColumnTrait, DatabaseConnection, DbErr, EntityTr
 use std::sync::Arc;
 
 mod sink;
+#[allow(unused_imports)]
 pub use sink::{DbSink, ProviderEvent, Sink};
 
 pub mod hjem_docs;
+
+#[cfg(feature = "nixpkgs")]
 pub mod nixpkgs;
+
+#[cfg(feature = "noogle")]
 pub mod noogle;
 
 pub struct ProviderInformation {
