@@ -8,7 +8,7 @@ use sea_orm::ActiveValue::*;
 use sea_orm::DbErr;
 use std::sync::Arc;
 
-use super::{fetch_source, TemplateProviderConfig};
+use super::{fetch_source, html_to_markdown, TemplateProviderConfig};
 
 pub struct RenderDocsProvider {
     name: String,
@@ -52,14 +52,15 @@ impl RenderDocsProvider {
             .map_err(|e| DbErr::Custom(format!("Failed to parse HTML: {}", e)))?;
 
         for opt in options {
+            let markdown = opt.raw_html.map(|h| html_to_markdown(&h)).unwrap_or_default();
             sink.emit(ProviderEvent::Option(option_entity::ActiveModel {
                 id: NotSet,
                 provider_name: Set(self.name.clone()),
                 name: Set(opt.name),
                 type_signature: Set(opt.option_type),
                 default_value: Set(opt.default),
-                format: Set(DocumentationFormat::HTML),
-                data: Set(opt.raw_html.unwrap_or_default()),
+                format: Set(DocumentationFormat::Markdown),
+                data: Set(markdown),
             }))
             .await?;
         }

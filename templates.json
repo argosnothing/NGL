@@ -4,13 +4,25 @@
       "template": "renderdocs",
       "name": "plasma-manager",
       "source": "https://nix-community.github.io/plasma-manager/options.xhtml",
-      "kinds": ["option"]
+      "kinds": ["options"]
     },
     {
       "template": "renderdocs",
       "name": "home-manager",
       "source": "https://nix-community.github.io/home-manager/options.xhtml",
-      "kinds": ["option"]
+      "kinds": ["options"]
+    },
+    {
+      "template": "ndg_options_html",
+      "name": "hjem",
+      "source": "https://hjem.feel-co.org/options.html",
+      "kinds": ["options", "examples"]
+    },
+    {
+      "template": "ndg_options_html",
+      "name": "nvf",
+      "source": "https://nvf.notashelf.dev/options.html",
+      "kinds": ["options", "examples"]
     }
   ]
 }

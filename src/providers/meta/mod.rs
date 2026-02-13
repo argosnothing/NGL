@@ -4,9 +4,11 @@ use crate::providers::Provider;
 use serde::Deserialize;
 use std::path::PathBuf;
 
+mod ndg_options_html;
 mod options_json;
 mod renderdocs;
 
+pub use ndg_options_html::NdgOptionsHtmlProvider;
 pub use options_json::OptionsJsonProvider;
 pub use renderdocs::RenderDocsProvider;
 
@@ -63,6 +65,7 @@ impl MetaProvider {
         match cfg.template.as_str() {
             "renderdocs" => Some(Box::new(RenderDocsProvider::from_config(cfg))),
             "options_json" => Some(Box::new(OptionsJsonProvider::from_config(cfg))),
+            "ndg_options_html" => Some(Box::new(NdgOptionsHtmlProvider::from_config(cfg))),
             unknown => {
                 eprintln!("Warning: unknown template type '{}', skipping", unknown);
                 None
@@ -73,6 +76,10 @@ impl MetaProvider {
 
 pub fn is_url(source: &str) -> bool {
     source.starts_with("http://") || source.starts_with("https://")
+}
+
+pub fn html_to_markdown(html: &str) -> String {
+    html2md::parse_html(html)
 }
 
 pub async fn fetch_source(source: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
