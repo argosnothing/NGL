@@ -1,6 +1,6 @@
-mod db;
-mod providers;
-mod registry;
+pub mod db;
+pub mod providers;
+pub mod registry;
 pub mod schema;
 
 pub use schema::{
