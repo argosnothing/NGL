@@ -5,11 +5,14 @@ Feel free to open PR's for any of these todos
 In no particular order...  
 - Implement Providers (Global!!! Meaning we need as much data as possible!!!! MORE MORE MORE)
 - NGL lifetime. Have a daemon or some systemd service maybe? Maybe overkill? hmm. 
+  - Issue is that for things like fzf that provides rapid requests as you type we probably should have
+    some way to keep a db connection open, and generally memory from open configs, so we don't need to file read
+    on every request. 
 - NGL cli -> returns json
   - Support for: manual sync, xyz provider
   - Query with: kinds[], providers[], search term
 - Config file
-- Modularity... Currently NGL is one crate, maybe this is how we'll do it, but one idea would be to investigate ways to decouple providers from
+- (partly done, feature flags for stuff like nixpkgs setup) Modularity... Currently NGL is one crate, maybe this is how we'll do it, but one idea would be to investigate ways to decouple providers from
   NGL code they should not care about. For example, instead of a ProviderEvent wrapping a seo_orm model, wrap a publically facing Domain model that NGL will then map onto the sea_orm model. 
   - In line with this investigate ways to have NGL providers as separate plugins, crates, somehow. They would have NGL as a dependency to manage their state maybe?? For example, lets say you only care about the noogle provider. NGL currently only syncs kinds of data you care about, but the over providers and their own dependencies are in the same crate, could there be a flag we could run to say we want "everything" or we want xyz provider, and it'd only compile code that that provider/s uses?
 - (DONE) Implement Meta Providers that makes it easier to work with similar kinds of sources
