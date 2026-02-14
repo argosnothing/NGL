@@ -25,16 +25,26 @@ NGL provides a single search interface that:
 
 Search once, get documentation from everywhere.
 
-NGL is **NOT** a solution providing its own frontend. It wants to be used in **YOUR** nix related documentation project.   
-NGL emphasizes control over  
+NGL is **NOT** a solution providing its own frontend.  
+It wants to be used in **YOUR** nix related documentation project.   
+### NGL emphasizes control over  
 - What *kind* of data gets synced
 - What providers (sources of data) you want to deal with. ( including their dependencies for feature flags)  
+All while letting you focus on your website/api/tui-app instead of document fetching, databases, caching, and whatever nonsense I had to do for the nixpkgs provider to not destroy your ram!   
 
 This means, you don't need to worry about additional bloat from data you don't care about using, only the data you want, from the sources you want for the things you want. 
 
 ## Status
 
-Pattern for writing providers is done, Noogle provider is implemented (need minor cleanup on pruning data before db insert), see the [TODO](./TODO.md) for the biggest bounties.
+Many providers are implemented, the major missing ones are nixos-manual for our first guide providers, but we have bunches currently:
+- Noogle for functions and examples
+- Nixpkgs for packages
+- hjem for options and examples ( web scrapped currently )
+- nvf for options and examples ( web scrapped currently )
+
+The API for responses is still up in the air, and i'm potentially relying on potential consumers of this API to tell me the data they care about for each kind that NGL offers. 
+
+Currently the language i'm going with is markdown for formatted data, this means the current html parses will provide you markdown data.
 
 
 ## [Contributing!!!](./CONTRIBUTING.MD)
