@@ -25,6 +25,7 @@ pub struct ProviderInformation {
     /// This is what determines if your provider gets synced
     pub kinds: Vec<NGLDataKind>,
     pub name: String,
+    pub sync_interval_hours: Option<u32>,
     #[allow(unused)]
     pub source: String,
 }
@@ -95,7 +96,7 @@ pub trait Provider: Send {
 
             let needs_sync = if let Some(entry) = cache_entry {
                 let age = Utc::now().signed_duration_since(entry.last_synced);
-                age >= chrono::Duration::hours(24)
+                age >= chrono::Duration::hours(info.sync_interval_hours.unwrap_or(24) as i64)
             } else {
                 true
             };

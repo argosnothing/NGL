@@ -61,6 +61,7 @@ impl TemplateProviderConfig {
             name: self.name.clone(),
             source: self.source.clone(),
             kinds,
+            sync_interval_hours: Some(24),
         }
     }
 }

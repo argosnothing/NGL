@@ -32,6 +32,7 @@ impl Provider for Noogle {
             name: "noogle".to_string(),
             source: "https://noogle.dev".to_string(),
             kinds: vec![NGLDataKind::Function, NGLDataKind::Example],
+            sync_interval_hours: Some(24),
         }
     }
 

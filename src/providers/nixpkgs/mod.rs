@@ -32,6 +32,7 @@ impl Provider for NixPkgs {
             kinds: vec![NGLDataKind::Package],
             name: "nixpkgs".to_string(),
             source: "https://releases.nixos.org/nixpkgs/".to_string(),
+            sync_interval_hours: Some(24),
         }
     }
 
