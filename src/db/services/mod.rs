@@ -73,7 +73,7 @@ pub async fn populate_fts5(db: &DatabaseConnection) -> Result<(), DbErr> {
     db.execute(Statement::from_string(
         db.get_database_backend(),
         "INSERT INTO ngl_search (entity_id, kind, provider_name, title, content)
-         SELECT id, 'Option', provider_name, name, data FROM options"
+         SELECT id, 'Option', provider_name, name, '' FROM options"
             .to_owned(),
     ))
     .await?;
@@ -85,7 +85,6 @@ pub async fn populate_fts5(db: &DatabaseConnection) -> Result<(), DbErr> {
             .to_owned(),
     ))
     .await?;
-
 
     db.execute(Statement::from_string(
         db.get_database_backend(),
