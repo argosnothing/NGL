@@ -37,7 +37,6 @@ async fn main() -> anyhow::Result<()> {
     };
 
     ProviderRegistry::sync(&db, request.clone()).await?;
-    println!("Sync complete!");
 
     println!("\nQuerying for '{}'...", term.clone());
 
