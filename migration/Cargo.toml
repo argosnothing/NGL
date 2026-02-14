@@ -1,8 +1,10 @@
 [package]
-name = "migration"
+name = "ngl-migration"
 version = "0.1.0"
 edition = "2021"
-publish = false
+description = "Database migrations for NGL"
+license = "GPL-3.0"
+repository = "https://github.com/argosnothing/NGL"
 
 [lib]
 name = "migration"
