@@ -2,6 +2,12 @@
 name = "ngl"
 version = "0.1.0"
 edition = "2024"
+description = "Unified API for Nix documentation"
+license = "GPL-3.0"
+repository = "https://github.com/argosnothing/NGL"
+readme = "README.md"
+keywords = ["nix", "nixos", "documentation", "api"]
+categories = ["command-line-utilities", "api-bindings"]
 
 [features]
 default = ["noogle"]
@@ -18,7 +24,7 @@ sea-orm-migration = { version = "1.1.19", features = ["sqlx-sqlite", "runtime-to
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread"] }
-migration = { path = "migration" }
+migration = { version = "0.1.0", path = "migration" }
 pulldown-cmark = "0.13.0"
 async-trait = "0.1.89"
 futures = "0.3.31"
