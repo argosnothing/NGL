@@ -49,6 +49,10 @@ pub trait Provider: Send {
     /// 1. Advertise what kind of data it can provide through `get_info()`
     /// 2. Pull raw data from a source, transform it into our internal format, and emit it through the provided `Sink`.
     /// 3. implement this `sync()` method that emits events representing the data it provides.
+    /// -  A bit of clarifation, kinds advertised by ProviderInformation->kinds informs the
+    ///    registry of what kinds the provider can work with.
+    ///    The `kinds` specified in the sync method are the kinds of data that are actually requesting
+    ///    to be synced in the current sync.
     ///
     /// # Examples:
     /// ```ignore
