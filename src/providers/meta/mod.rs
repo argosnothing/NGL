@@ -1,3 +1,5 @@
+// Providers that provide... Providers!!!!
+//
 // Massive credit to nix-search-tv for the idea of config based templates.
 // https://github.com/3timeslazy/nix-search-tv
 use crate::providers::Provider;
@@ -82,7 +84,9 @@ pub fn html_to_markdown(html: &str) -> String {
     html2md::parse_html(html)
 }
 
-pub async fn fetch_source(source: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+pub async fn fetch_source(
+    source: &str,
+) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     if is_url(source) {
         let resp = reqwest::get(source).await?;
         if !resp.status().is_success() {

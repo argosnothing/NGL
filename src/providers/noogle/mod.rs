@@ -5,7 +5,9 @@ use crate::{
         entities::{example, function},
         enums::{documentation_format::DocumentationFormat, language::Language},
     },
-    providers::{Provider, ProviderEvent, ProviderInformation, Sink, noogle::schema::NoogleResponse},
+    providers::{
+        Provider, ProviderEvent, ProviderInformation, Sink, noogle::schema::NoogleResponse,
+    },
     schema::NGLDataKind,
 };
 use async_trait::async_trait;
@@ -54,24 +56,20 @@ impl Provider for Noogle {
                 .unwrap_or_default();
 
             if fetch_functions {
-                let source_url = Some(format!(
-                    "https://noogle.dev/f/{}",
-                    doc.meta.path.join("/")
-                ));
+                let source_url = Some(format!("https://noogle.dev/f/{}", doc.meta.path.join("/")));
 
                 let source_code_url = doc.meta.attr_position.as_ref().map(|pos| {
                     format!(
                         "https://github.com/NixOS/nixpkgs/blob/{}/{}#L{}",
-                        upstream_rev,
-                        pos.file,
-                        pos.line
+                        upstream_rev, pos.file, pos.line
                     )
                 });
 
                 let aliases = doc.meta.aliases.as_ref().map(|a| {
                     serde_json::to_string(
-                        &a.iter().map(|parts| parts.join(".")).collect::<Vec<_>>()
-                    ).unwrap_or_default()
+                        &a.iter().map(|parts| parts.join(".")).collect::<Vec<_>>(),
+                    )
+                    .unwrap_or_default()
                 });
 
                 sink.emit(ProviderEvent::Function(function::ActiveModel {

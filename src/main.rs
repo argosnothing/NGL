@@ -28,8 +28,13 @@ async fn main() -> anyhow::Result<()> {
     let request = NGLRequest {
         search_term: Some(term.clone()),
         providers: None,
-        kinds: Some(vec![NGLDataKind::Function, NGLDataKind::Example, NGLDataKind::Package, NGLDataKind::Option]),
-    }; 
+        kinds: Some(vec![
+            NGLDataKind::Function,
+            // NGLDataKind::Example,
+            NGLDataKind::Package,
+            NGLDataKind::Option,
+        ]),
+    };
 
     ProviderRegistry::sync(&db, request.clone()).await?;
     println!("Sync complete!");

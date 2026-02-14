@@ -2,15 +2,15 @@
 use crate::providers::{Provider, ProviderEvent, Sink};
 use crate::schema::NGLDataKind;
 use async_trait::async_trait;
+use brotli2::read::BrotliDecoder;
+use sea_orm::ActiveValue::*;
 use sea_orm::DbErr;
-use serde::de::{self, Deserializer, MapAccess, Visitor};
 use serde::Deserialize;
+use serde::de::{self, Deserializer, MapAccess, Visitor};
 use std::fmt;
 use std::io::Read;
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use brotli2::read::BrotliDecoder;
-use sea_orm::ActiveValue::*;
 
 pub mod schema;
 
@@ -18,7 +18,7 @@ pub struct NixPkgs {}
 
 /// I had to do a lot of cursed things to prevent all the incoming data flooding ram, but it works
 /// pretty well considering how much data im having to work with, and it's not all happening
-/// in memory so that's what is important. 
+/// in memory so that's what is important.
 impl NixPkgs {
     pub fn new() -> Self {
         Self {}
@@ -40,7 +40,7 @@ impl Provider for NixPkgs {
             return Ok(());
         }
 
-        /// If you don't set that env var somewhere, you're going to have a bad time. 
+        /// If you don't set that env var somewhere, you're going to have a bad time.
         let release = if let Ok(r) = std::env::var("NGL_NIXPKGS_RELEASE") {
             r
         } else {
@@ -57,7 +57,8 @@ impl NixPkgs {
         let mut found: Vec<String> = Vec::new();
 
         loop {
-            let mut url = String::from("https://nix-releases.s3.amazonaws.com/?list-type=2&prefix=nixpkgs/");
+            let mut url =
+                String::from("https://nix-releases.s3.amazonaws.com/?list-type=2&prefix=nixpkgs/");
             if let Some(token) = &continuation {
                 let enc = urlencoding::encode(token);
                 url.push_str(&format!("&continuation-token={}", enc));
@@ -66,20 +67,29 @@ impl NixPkgs {
             let resp = match reqwest::get(&url).await {
                 Ok(r) if r.status().is_success() => r,
                 Ok(r) => {
-                    return Err(DbErr::Custom(format!("unexpected status {} when listing S3", r.status())));
+                    return Err(DbErr::Custom(format!(
+                        "unexpected status {} when listing S3",
+                        r.status()
+                    )));
                 }
                 Err(e) => {
                     return Err(DbErr::Custom(format!("http s3 list error: {}", e)));
                 }
             };
 
-            let body = resp.text().await.map_err(|e| DbErr::Custom(e.to_string()))?;
+            let body = resp
+                .text()
+                .await
+                .map_err(|e| DbErr::Custom(e.to_string()))?;
 
             let key_re = regex::Regex::new(r#"<Key>([^<]+)</Key>"#).unwrap();
             for cap in key_re.captures_iter(&body) {
                 let key = cap.get(1).unwrap().as_str();
                 if key.ends_with("/packages.json.br") {
-                    if let Some(cap2) = regex::Regex::new(r#"^nixpkgs/([^/]+)/packages.json.br$"#).unwrap().captures(key) {
+                    if let Some(cap2) = regex::Regex::new(r#"^nixpkgs/([^/]+)/packages.json.br$"#)
+                        .unwrap()
+                        .captures(key)
+                    {
                         if let Some(m) = cap2.get(1) {
                             found.push(m.as_str().to_string());
                         }
@@ -87,7 +97,9 @@ impl NixPkgs {
                 }
             }
 
-            let next_re = regex::Regex::new(r#"<NextContinuationToken>([^<]+)</NextContinuationToken>"#).unwrap();
+            let next_re =
+                regex::Regex::new(r#"<NextContinuationToken>([^<]+)</NextContinuationToken>"#)
+                    .unwrap();
             if let Some(cap) = next_re.captures(&body) {
                 continuation = Some(cap.get(1).unwrap().as_str().to_string());
             } else {
@@ -108,7 +120,8 @@ impl NixPkgs {
             .await
             .map_err(|e| DbErr::Custom(e.to_string()))?;
 
-        let key_re = regex::Regex::new(r#"<Key>(nixpkgs/([^<]+?)/packages.json.br)</Key>"#).unwrap();
+        let key_re =
+            regex::Regex::new(r#"<Key>(nixpkgs/([^<]+?)/packages.json.br)</Key>"#).unwrap();
         let mut candidate_releases: Vec<String> = key_re
             .captures_iter(&body)
             .filter_map(|cap| cap.get(2).map(|m| m.as_str().to_string()))
@@ -122,11 +135,20 @@ impl NixPkgs {
         let re = regex::Regex::new(r#"<Prefix>(nixpkgs/[^<]+/)</Prefix>"#).unwrap();
         let mut releases: Vec<String> = re
             .captures_iter(&body)
-            .filter_map(|cap| cap.get(1).map(|m| m.as_str().trim_end_matches('/').trim_start_matches("nixpkgs/").to_string()))
+            .filter_map(|cap| {
+                cap.get(1).map(|m| {
+                    m.as_str()
+                        .trim_end_matches('/')
+                        .trim_start_matches("nixpkgs/")
+                        .to_string()
+                })
+            })
             .collect();
 
         if releases.is_empty() {
-            return Err(DbErr::Custom("failed to discover nixpkgs release".to_string()));
+            return Err(DbErr::Custom(
+                "failed to discover nixpkgs release".to_string(),
+            ));
         }
 
         releases.sort();
@@ -149,17 +171,23 @@ impl NixPkgs {
             .map_err(|e| DbErr::Custom(e.to_string()))?;
 
         if !resp.status().is_success() {
-            return Err(DbErr::Custom(format!("unexpected http status {}", resp.status())));
+            return Err(DbErr::Custom(format!(
+                "unexpected http status {}",
+                resp.status()
+            )));
         }
 
-        let bytes = resp.bytes().await.map_err(|e| DbErr::Custom(e.to_string()))?;
+        let bytes = resp
+            .bytes()
+            .await
+            .map_err(|e| DbErr::Custom(e.to_string()))?;
 
         let (tx, mut rx) = mpsc::channel::<Result<(String, serde_json::Value), String>>(64);
 
-        // TL;DR: We got the packages.json.br file, but we don't want to load the whole thing into memory and 
-        // parse it with serde_json, because it's huge. Instead, we spawn a blocking task to 
-        // stream-parse it with serde_json's Deserializer, sending each package through a channel as it's parsed. 
-        // This way we can start processing packages immediately without waiting for the entire file to be parsed, 
+        // TL;DR: We got the packages.json.br file, but we don't want to load the whole thing into memory and
+        // parse it with serde_json, because it's huge. Instead, we spawn a blocking task to
+        // stream-parse it with serde_json's Deserializer, sending each package through a channel as it's parsed.
+        // This way we can start processing packages immediately without waiting for the entire file to be parsed,
         // and we never have more than one decompressed package in memory at a time.
         let parse_handle = tokio::task::spawn_blocking(move || {
             let reader: Box<dyn Read + Send> = if bytes.first().map(|b| *b) == Some(b'{') {
@@ -189,39 +217,41 @@ impl NixPkgs {
                 .and_then(|d| d.as_str())
                 .map(|s| s.to_string());
 
-            let homepage = meta
-                .and_then(|m| m.get("homepage"))
-                .and_then(|h| {
-                    if let Some(s) = h.as_str() {
-                        Some(s.to_string())
-                    } else if let Some(arr) = h.as_array() {
-                        arr.first().and_then(|v| v.as_str()).map(|s| s.to_string())
-                    } else {
-                        None
-                    }
-                });
+            let homepage = meta.and_then(|m| m.get("homepage")).and_then(|h| {
+                if let Some(s) = h.as_str() {
+                    Some(s.to_string())
+                } else if let Some(arr) = h.as_array() {
+                    arr.first().and_then(|v| v.as_str()).map(|s| s.to_string())
+                } else {
+                    None
+                }
+            });
 
-            let license = meta
-                .and_then(|m| m.get("license"))
-                .and_then(|l| {
-                    if let Some(s) = l.as_str() {
-                        Some(s.to_string())
-                    } else if let Some(obj) = l.as_object() {
-                        obj.get("spdxId").or(obj.get("fullName")).and_then(|v| v.as_str()).map(|s| s.to_string())
-                    } else if let Some(arr) = l.as_array() {
-                        arr.first().and_then(|v| {
-                            if let Some(s) = v.as_str() {
-                                Some(s.to_string())
-                            } else if let Some(obj) = v.as_object() {
-                                obj.get("spdxId").or(obj.get("fullName")).and_then(|x| x.as_str()).map(|s| s.to_string())
-                            } else {
-                                None
-                            }
-                        })
-                    } else {
-                        None
-                    }
-                });
+            let license = meta.and_then(|m| m.get("license")).and_then(|l| {
+                if let Some(s) = l.as_str() {
+                    Some(s.to_string())
+                } else if let Some(obj) = l.as_object() {
+                    obj.get("spdxId")
+                        .or(obj.get("fullName"))
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                } else if let Some(arr) = l.as_array() {
+                    arr.first().and_then(|v| {
+                        if let Some(s) = v.as_str() {
+                            Some(s.to_string())
+                        } else if let Some(obj) = v.as_object() {
+                            obj.get("spdxId")
+                                .or(obj.get("fullName"))
+                                .and_then(|x| x.as_str())
+                                .map(|s| s.to_string())
+                        } else {
+                            None
+                        }
+                    })
+                } else {
+                    None
+                }
+            });
 
             let position = meta
                 .and_then(|m| m.get("position"))
@@ -231,7 +261,10 @@ impl NixPkgs {
                 let parts: Vec<&str> = pos.splitn(2, ':').collect();
                 let file = parts.first().unwrap_or(&"");
                 let line = parts.get(1).unwrap_or(&"1");
-                format!("https://github.com/NixOS/nixpkgs/blob/master/{}#L{}", file, line)
+                format!(
+                    "https://github.com/NixOS/nixpkgs/blob/master/{}#L{}",
+                    file, line
+                )
             });
 
             let broken = meta
@@ -246,24 +279,30 @@ impl NixPkgs {
 
             let data = serde_json::to_string(&pkg_value).unwrap_or_default();
 
-            sink.emit(ProviderEvent::Package(crate::db::entities::package::ActiveModel {
-                id: NotSet,
-                provider_name: Set("nixpkgs".to_string()),
-                name: Set(name),
-                version: Set(version),
-                format: Set(crate::db::enums::documentation_format::DocumentationFormat::PlainText),
-                data: Set(data),
-                description: Set(description),
-                homepage: Set(homepage),
-                license: Set(license),
-                source_code_url: Set(source_code_url),
-                broken: Set(broken),
-                unfree: Set(unfree),
-            }))
+            sink.emit(ProviderEvent::Package(
+                crate::db::entities::package::ActiveModel {
+                    id: NotSet,
+                    provider_name: Set("nixpkgs".to_string()),
+                    name: Set(name),
+                    version: Set(version),
+                    format: Set(
+                        crate::db::enums::documentation_format::DocumentationFormat::PlainText,
+                    ),
+                    data: Set(data),
+                    description: Set(description),
+                    homepage: Set(homepage),
+                    license: Set(license),
+                    source_code_url: Set(source_code_url),
+                    broken: Set(broken),
+                    unfree: Set(unfree),
+                },
+            ))
             .await?;
         }
 
-        parse_handle.await.map_err(|e| DbErr::Custom(e.to_string()))?;
+        parse_handle
+            .await
+            .map_err(|e| DbErr::Custom(e.to_string()))?;
 
         Ok(())
     }
@@ -291,7 +330,9 @@ fn stream_packages_to_channel<R: Read>(
         {
             while let Some(key) = map.next_key::<String>()? {
                 if key == "packages" {
-                    map.next_value_seed(PackagesStreamSeed { tx: self.tx.clone() })?;
+                    map.next_value_seed(PackagesStreamSeed {
+                        tx: self.tx.clone(),
+                    })?;
                 } else {
                     map.next_value::<serde::de::IgnoredAny>()?;
                 }

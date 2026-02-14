@@ -2,8 +2,7 @@
 
 A unified search and aggregation layer for Nix documentation.
 
-## The Problem
-
+## The Problem  
 Nix documentation is scattered across dozens of sources:
 - [noogle.dev](https://noogle.dev) for function documentation
 - [search.nixos.org](https://search.nixos.org) for packages and options
@@ -17,6 +16,7 @@ Several projects have been built to get data individually from these sources, bu
 
 ## The Solution
 
+
 NGL provides a single search interface that:
 - **Queries multiple providers** automatically
 - **Normalizes heterogeneous data** into a consistent format
@@ -25,7 +25,12 @@ NGL provides a single search interface that:
 
 Search once, get documentation from everywhere.
 
-NGL is simply a library that gives code a single source for a ton of different aggregated nix documentation. 
+NGL is **NOT** a solution providing its own frontend. It wants to be used in **YOUR** nix related documentation project.   
+NGL emphasizes control over  
+- What *kind* of data gets synced
+- What providers (sources of data) you want to deal with. ( including their dependencies for feature flags)  
+
+This means, you don't need to worry about additional bloat from data you don't care about using, only the data you want, from the sources you want for the things you want. 
 
 ## Status
 

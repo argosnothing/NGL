@@ -7,7 +7,6 @@ use async_trait::async_trait;
 use sea_orm::{DatabaseConnection, DbErr};
 use tokio::sync::Mutex;
 
-
 /// Carrier for event data.
 pub enum ProviderEvent {
     Function(function::ActiveModel),
@@ -21,7 +20,7 @@ pub enum ProviderEvent {
 #[async_trait]
 pub trait Sink: Send + Sync {
     /// Emit an event to the sink
-    /// # Examples: 
+    /// # Examples:
     /// ```rust
     ///   sink.emit(ProviderEvent::Function(function::ActiveModel {
     ///    id: NotSet,
@@ -128,7 +127,7 @@ impl Sink for DbSink {
         Ok(())
     }
 
-    /// remainer stuff after batch 
+    /// remainer stuff after batch
     async fn flush(&self) -> Result<(), DbErr> {
         let funcs: Vec<_> = self.functions.lock().await.drain(..).collect();
         if !funcs.is_empty() {

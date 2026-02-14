@@ -21,6 +21,7 @@ pub mod nixpkgs;
 pub mod noogle;
 
 pub struct ProviderInformation {
+    /// This is what determines if your provider gets synced
     pub kinds: Vec<NGLDataKind>,
     pub name: String,
     #[allow(unused)]
@@ -44,11 +45,11 @@ pub trait Provider: Send {
     /// ```
     fn get_info(&self) -> ProviderInformation;
 
-    /// The role of the provider is to 
+    /// The role of the provider is to
     /// 1. Advertise what kind of data it can provide through `get_info()`
     /// 2. Pull raw data from a source, transform it into our internal format, and emit it through the provided `Sink`.
-    /// 3. implement this `sync()` method that emits events representing the data it provides. 
-    /// 
+    /// 3. implement this `sync()` method that emits events representing the data it provides.
+    ///
     /// # Examples:
     /// ```ignore
     /// async fn sync(&mut self, sink: Arc<dyn Sink>, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
@@ -62,7 +63,11 @@ pub trait Provider: Send {
     /// ```
     async fn sync(&mut self, sink: Arc<dyn Sink>, kinds: &[NGLDataKind]) -> Result<(), DbErr>;
 
-    async fn refresh(&mut self, db: &DatabaseConnection, request: NGLRequest) -> Result<bool, DbErr> {
+    async fn refresh(
+        &mut self,
+        db: &DatabaseConnection,
+        request: NGLRequest,
+    ) -> Result<bool, DbErr> {
         let requested_kinds = request
             .kinds
             .as_ref()

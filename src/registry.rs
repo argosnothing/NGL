@@ -1,11 +1,11 @@
-use crate::{
-    providers::{meta::MetaProvider, Provider},
-    schema::NGLRequest,
-};
-#[cfg(feature = "noogle")]
-use crate::providers::noogle::Noogle;
 #[cfg(feature = "nixpkgs")]
 use crate::providers::nixpkgs::NixPkgs;
+#[cfg(feature = "noogle")]
+use crate::providers::noogle::Noogle;
+use crate::{
+    providers::{Provider, meta::MetaProvider},
+    schema::NGLRequest,
+};
 use futures::future::join_all;
 use sea_orm::{DatabaseConnection, DbErr};
 use std::path::PathBuf;
@@ -58,26 +58,26 @@ impl ProviderRegistry {
         let sync_futures: Vec<_> = providers
             .into_iter()
             .map(|mut provider| {
-            let request_clone = request.clone();
-            let db_clone = db.clone();
-            async move { provider.refresh(&db_clone, request_clone).await }
+                let request_clone = request.clone();
+                let db_clone = db.clone();
+                async move { provider.refresh(&db_clone, request_clone).await }
             })
             .collect();
 
-            let results = join_all(sync_futures).await;
+        let results = join_all(sync_futures).await;
 
-            let mut reindex = false;
-            for result in results {
-                let synced = result?;
-                if synced {
-                    reindex = true;
-                }
+        let mut reindex = false;
+        for result in results {
+            let synced = result?;
+            if synced {
+                reindex = true;
             }
+        }
 
-            if reindex {
-                eprint!("Reindexing FTS5 tables...");
-                crate::db::services::populate_fts5(db).await?;
-            }
+        if reindex {
+            eprint!("Reindexing FTS5 tables...");
+            crate::db::services::populate_fts5(db).await?;
+        }
         Ok(())
     }
 }
