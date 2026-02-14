@@ -39,6 +39,8 @@ This means, you don't need to worry about additional bloat from data you don't c
 Many providers are implemented, the major missing ones are nixos-manual for our first guide providers, but we have bunches currently:
 - Noogle for functions and examples
 - Nixpkgs for packages
+- home manager for options and examples
+- plasma manager for options and examples
 - hjem for options and examples ( web scrapped currently )
 - nvf for options and examples ( web scrapped currently )
 
