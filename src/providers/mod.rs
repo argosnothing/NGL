@@ -20,6 +20,7 @@ pub mod nixpkgs;
 #[cfg(feature = "noogle")]
 pub mod noogle;
 
+#[derive(Clone)]
 pub struct ProviderInformation {
     /// This is what determines if your provider gets synced
     pub kinds: Vec<NGLDataKind>,

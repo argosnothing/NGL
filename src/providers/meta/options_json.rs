@@ -1,45 +1,28 @@
 use crate::db::entities::option as option_entity;
 use crate::db::enums::documentation_format::DocumentationFormat;
-use crate::providers::{Provider, ProviderEvent, ProviderInformation, Sink};
+use crate::providers::{ProviderEvent, ProviderInformation, Sink};
 use crate::schema::NGLDataKind;
-use async_trait::async_trait;
 use sea_orm::ActiveValue::*;
 use sea_orm::DbErr;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use super::{fetch_source, TemplateProviderConfig};
+use super::{ConfigProvider, TemplateProviderConfig, fetch_source};
 
 pub struct OptionsJsonProvider {
-    name: String,
-    source: String,
-    kinds: Vec<NGLDataKind>,
+    info: ProviderInformation,
 }
 
 impl OptionsJsonProvider {
-    pub fn new(name: String, source: String, kinds: Vec<NGLDataKind>) -> Self {
-        Self { name, source, kinds }
-    }
-
     pub fn from_config(cfg: &TemplateProviderConfig) -> Self {
-        let kinds = cfg
-            .kinds
-            .iter()
-            .filter_map(|k| match k.to_lowercase().as_str() {
-                "option" | "options" => Some(NGLDataKind::Option),
-                _ => {
-                    eprintln!("Warning: options_json only supports 'option' kind, got '{}'", k);
-                    None
-                }
-            })
-            .collect();
-
-        Self::new(cfg.name.clone(), cfg.source.clone(), kinds)
+        Self {
+            info: cfg.to_provider_info(Some(&["option", "options"])),
+        }
     }
 
     async fn parse_options(&self, sink: Arc<dyn Sink>) -> Result<(), DbErr> {
-        let json_str = fetch_source(&self.source)
+        let json_str = fetch_source(&self.info.source)
             .await
             .map_err(|e| DbErr::Custom(format!("Failed to fetch source: {}", e)))?;
 
@@ -59,7 +42,7 @@ impl OptionsJsonProvider {
 
             sink.emit(ProviderEvent::Option(option_entity::ActiveModel {
                 id: NotSet,
-                provider_name: Set(self.name.clone()),
+                provider_name: Set(self.info.name.clone()),
                 name: Set(name.clone()),
                 type_signature: Set(opt.option_type),
                 default_value: Set(default_value),
@@ -73,18 +56,13 @@ impl OptionsJsonProvider {
     }
 }
 
-#[async_trait]
-impl Provider for OptionsJsonProvider {
-    fn get_info(&self) -> ProviderInformation {
-        ProviderInformation {
-            kinds: self.kinds.clone(),
-            name: self.name.clone(),
-            source: self.source.clone(),
-        }
+impl ConfigProvider for OptionsJsonProvider {
+    fn provider_info(&self) -> &ProviderInformation {
+        &self.info
     }
 
     async fn sync(&mut self, sink: Arc<dyn Sink>, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
-        if kinds.contains(&NGLDataKind::Option) && self.kinds.contains(&NGLDataKind::Option) {
+        if kinds.contains(&NGLDataKind::Option) && self.info.kinds.contains(&NGLDataKind::Option) {
             self.parse_options(sink).await?;
         }
         Ok(())
@@ -95,16 +73,16 @@ impl Provider for OptionsJsonProvider {
 pub struct OptionEntry {
     #[serde(rename = "type")]
     pub option_type: Option<String>,
-    
+
     pub description: Option<String>,
-    
+
     #[serde(rename = "default")]
     pub default: Option<OptionValue>,
-    
+
     pub example: Option<OptionValue>,
-    
+
     pub declarations: Option<Vec<serde_json::Value>>,
-    
+
     #[serde(rename = "readOnly")]
     pub read_only: Option<bool>,
 }
