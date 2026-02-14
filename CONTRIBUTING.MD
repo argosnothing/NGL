@@ -1,7 +1,13 @@
 # Contributing
 
-Early on, the [schema](./src/schema.rs) is going to be up in the air, as more providers are written, we should iron out what the important data for each kind of documentation is. Feel free to add onto the schema.
+## Dev environment:  
+Nix develop is important, as I provide an env variable for nixpkgs if you end up compiling with that feature. It is by default compiled out on build as it can take time to cache, although i've taken some pains to make it memory efficientish.
 
+Currently the only way to trigger a sync is by sending in a request with the specified types and providers, with None defaulting to all on both. 
+cargo run lib.optional 
+after you run nix develop should give you a good example of the shape of the schema
+
+Early on, the [schema](./src/schema.rs) is going to be up in the air, as more providers are written, we should iron out what the important data for each kind of documentation is. Feel free to add onto the schema.
 
 ## Writing a Provider  
 Providers are what connects a source of information (api, website, etc) to the NGL database.
