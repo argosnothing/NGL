@@ -150,4 +150,11 @@ pub trait Provider: Send {
 
         Ok(true)
     }
+
+    fn new() -> Self
+    where
+        Self: Default,
+    {
+        Self::default()
+    }
 }

@@ -17,13 +17,8 @@ use std::sync::Arc;
 
 static ENDPOINT_URL: &str = "https://noogle.dev/api/v1/data";
 
+#[derive(Default)]
 pub struct Noogle;
-
-impl Noogle {
-    pub fn new() -> Self {
-        Self
-    }
-}
 
 #[async_trait]
 impl Provider for Noogle {

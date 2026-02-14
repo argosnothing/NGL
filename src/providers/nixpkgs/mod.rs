@@ -14,16 +14,13 @@ use tokio::sync::mpsc;
 
 pub mod schema;
 
+#[derive(Default)]
 pub struct NixPkgs {}
 
 /// I had to do a lot of cursed things to prevent all the incoming data flooding ram, but it works
 /// pretty well considering how much data im having to work with, and it's not all happening
 /// in memory so that's what is important.
-impl NixPkgs {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
+impl NixPkgs { }
 
 #[async_trait]
 impl Provider for NixPkgs {
