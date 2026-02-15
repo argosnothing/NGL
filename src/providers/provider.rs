@@ -4,7 +4,11 @@ use async_trait::async_trait;
 use chrono::Utc;
 use sea_orm::{ActiveValue::Set, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter};
 
-use crate::{NGLDataKind, NGLRequest, db::entities::{provider, provider_kind_cache}, providers::{DbSink, ProviderInformation, Sink}};
+use crate::{
+    NGLDataKind, NGLRequest,
+    db::entities::{provider, provider_kind_cache},
+    providers::{DbSink, ProviderInformation, Sink},
+};
 
 #[async_trait]
 pub trait Provider: Send {
@@ -83,7 +87,13 @@ pub trait Provider: Send {
             }
         }
 
-        if kinds_to_sync.is_empty() {
+        if kinds_to_sync.is_empty()
+            && self
+                .get_info()
+                .kinds
+                .iter()
+                .any(|provider_kind| requested_kinds.contains(provider_kind))
+        {
             println!("All requested kinds cached for {}", &info.name);
             return Ok(false);
         }

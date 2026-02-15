@@ -2,13 +2,14 @@ use crate::db::entities::option as option_entity;
 use crate::db::enums::documentation_format::DocumentationFormat;
 use crate::providers::{ProviderEvent, ProviderInformation, Sink};
 use crate::schema::NGLDataKind;
+use crate::utils::fetch_source;
 use sea_orm::ActiveValue::*;
 use sea_orm::DbErr;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use super::{ConfigProvider, TemplateProviderConfig, fetch_source};
+use super::{ConfigProvider, TemplateProviderConfig};
 
 pub struct OptionsJsonProvider {
     info: ProviderInformation,

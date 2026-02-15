@@ -3,7 +3,7 @@ use crate::providers::nixpkgs::NixPkgs;
 #[cfg(feature = "noogle")]
 use crate::providers::noogle::Noogle;
 use crate::{
-    providers::{Provider, meta::MetaProvider},
+    providers::{Provider, meta::MetaProvider, nixos_manual::NixosManual},
     schema::NGLRequest,
 };
 use futures::future::join_all;
@@ -36,6 +36,8 @@ impl ProviderRegistry {
         #[allow(unused_mut)]
         let mut providers: Vec<Box<dyn Provider + Send>> = vec![];
 
+        providers.push(Box::new(NixosManual::new()));
+
         // ADD YOUR PROVIDERS HERE, IDEALLY ALSO TIE THEM INTO A FEATURE
         // SO OTHER PROGRAMS CAN CHOOSE TO COMPILE THEM OUT
         #[cfg(feature = "noogle")]
@@ -57,10 +59,21 @@ impl ProviderRegistry {
 
         let sync_futures: Vec<_> = providers
             .into_iter()
-            .map(|mut provider| {
-                let request_clone = request.clone();
-                let db_clone = db.clone();
-                async move { provider.refresh(&db_clone, request_clone).await }
+            .filter_map(|mut provider| {
+                if provider.get_info().kinds.iter().any(|provider_kind| {
+                    request
+                        .kinds
+                        .as_ref()
+                        .map_or(false, |kinds| kinds.contains(provider_kind))
+                }) {
+                    Some({
+                        let request_clone = request.clone();
+                        let db_clone = db.clone();
+                        async move { provider.refresh(&db_clone, request_clone).await }
+                    })
+                } else {
+                    None
+                }
             })
             .collect();
 

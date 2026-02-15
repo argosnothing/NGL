@@ -2,6 +2,7 @@ mod db;
 mod providers;
 mod registry;
 mod schema;
+mod utils;
 
 use db::services::query_data;
 use registry::ProviderRegistry;
@@ -27,12 +28,14 @@ async fn main() -> anyhow::Result<()> {
 
     let request = NGLRequest {
         search_term: Some(term.clone()),
+        // providers: Some(vec!["nixos_manual".to_string()]),
         providers: None,
         kinds: Some(vec![
             NGLDataKind::Function,
             // NGLDataKind::Example,
-            NGLDataKind::Package,
-            NGLDataKind::Option,
+            // NGLDataKind::Package,
+            // NGLDataKind::Option,
+            // NGLDataKind::Guide,
         ]),
     };
 

@@ -4,12 +4,14 @@ use crate::db::enums::documentation_format::DocumentationFormat;
 use crate::db::enums::language::Language;
 use crate::providers::{ProviderEvent, ProviderInformation, Sink};
 use crate::schema::NGLDataKind;
+use crate::utils::fetch_source;
+use crate::utils::html_to_markdown;
 use scraper::{Element, ElementRef, Html, Selector};
 use sea_orm::ActiveValue::*;
 use sea_orm::DbErr;
 use std::sync::Arc;
 
-use super::{ConfigProvider, TemplateProviderConfig, fetch_source, html_to_markdown};
+use super::{ConfigProvider, TemplateProviderConfig};
 
 pub struct NdgOptionsHtmlProvider {
     info: ProviderInformation,

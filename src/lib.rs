@@ -2,6 +2,7 @@ pub mod db;
 pub mod providers;
 pub mod registry;
 pub mod schema;
+pub mod utils;
 
 pub use schema::{
     ExampleData, FunctionData, GuideData, NGLData, NGLDataKind, NGLDataVariant, NGLRaw, NGLRequest,
