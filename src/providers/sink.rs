@@ -127,7 +127,7 @@ impl Sink for DbSink {
         Ok(())
     }
 
-    /// remainer stuff after batch
+    /// remainder stuff after batch
     async fn flush(&self) -> Result<(), DbErr> {
         let funcs: Vec<_> = self.functions.lock().await.drain(..).collect();
         if !funcs.is_empty() {

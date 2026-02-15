@@ -2,14 +2,14 @@ use crate::schema::NGLDataKind;
 
 pub mod sink;
 
-#[allow(unused)]
-mod example;
-
 pub mod meta;
 pub mod provider;
 
 pub use provider::Provider;
 pub use sink::{DbSink, ProviderEvent, Sink};
+
+#[cfg(feature = "example")]
+pub mod example;
 
 #[cfg(feature = "nixpkgs")]
 pub mod nixpkgs;

@@ -1,3 +1,5 @@
+#[cfg(feature = "example")]
+use crate::providers::example::Example;
 #[cfg(feature = "nixos_manual")]
 use crate::providers::nixos_manual::NixosManual;
 #[cfg(feature = "nixpkgs")]
@@ -38,6 +40,8 @@ impl ProviderRegistry {
         #[allow(unused_mut)]
         let mut providers: Vec<Box<dyn Provider + Send>> = vec![];
 
+        #[cfg(feature = "example")]
+        providers.push(Box::new(Example::new()));
         // ADD YOUR PROVIDERS HERE, IDEALLY ALSO TIE THEM INTO A FEATURE
         // SO OTHER PROGRAMS CAN CHOOSE TO COMPILE THEM OUT
         #[cfg(feature = "noogle")]

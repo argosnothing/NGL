@@ -83,7 +83,8 @@ impl Provider for Example {
             source_url: Set(Some("example.com".to_string())),
             source_code_url: Set(Some("some other thing preferrably with built in marker for where in the sourcecode this is :)".to_string())),
             aliases: Set(Some("what other funcs are there".to_string())),
-        }));
+        }))
+        .await?;
         Ok(())
     }
 }
