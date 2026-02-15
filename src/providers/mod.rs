@@ -2,6 +2,9 @@ use crate::schema::NGLDataKind;
 
 pub mod sink;
 
+#[allow(unused)]
+mod example;
+
 pub mod meta;
 pub mod provider;
 
