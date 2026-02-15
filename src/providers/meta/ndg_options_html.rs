@@ -9,7 +9,6 @@ use crate::utils::html_to_markdown;
 use scraper::{Element, ElementRef, Html, Selector};
 use sea_orm::ActiveValue::*;
 use sea_orm::DbErr;
-use std::sync::Arc;
 
 use super::{ConfigProvider, TemplateProviderConfig};
 
@@ -26,7 +25,7 @@ impl NdgOptionsHtmlProvider {
 
     async fn parse_content(
         &self,
-        sink: Arc<dyn Sink>,
+        sink: &dyn Sink,
         emit_options: bool,
         emit_examples: bool,
     ) -> Result<(), DbErr> {
@@ -78,7 +77,7 @@ impl ConfigProvider for NdgOptionsHtmlProvider {
         &self.info
     }
 
-    async fn sync(&mut self, sink: Arc<dyn Sink>, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
+    async fn sync(&mut self, sink: &dyn Sink, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
         let emit_options =
             kinds.contains(&NGLDataKind::Option) && self.info.kinds.contains(&NGLDataKind::Option);
         let emit_examples = kinds.contains(&NGLDataKind::Example)

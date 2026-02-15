@@ -2,7 +2,6 @@ use crate::providers::{Provider, Sink};
 use crate::schema::NGLDataKind;
 use async_trait::async_trait;
 use sea_orm::DbErr;
-use std::sync::Arc;
 
 #[allow(unused)]
 pub struct HjemDocs;
@@ -13,7 +12,7 @@ impl Provider for HjemDocs {
         todo!()
     }
 
-    async fn sync(&mut self, _sink: Arc<dyn Sink>, _kinds: &[NGLDataKind]) -> Result<(), DbErr> {
+    async fn sync(&mut self, _sink: &dyn Sink, _kinds: &[NGLDataKind]) -> Result<(), DbErr> {
         todo!()
     }
 }

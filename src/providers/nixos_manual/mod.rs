@@ -1,5 +1,3 @@
-use std::{i32, sync::Arc};
-
 use async_trait::async_trait;
 use scraper::{Element, ElementRef, Html, Selector};
 use sea_orm::DbErr;
@@ -17,7 +15,7 @@ pub struct NixosManual {}
 
 #[async_trait]
 impl Provider for NixosManual {
-    async fn sync(&mut self, sink: Arc<dyn Sink>, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
+    async fn sync(&mut self, sink: &dyn Sink, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
         let Ok(result) = fetch_source(URL).await else {
             return Ok(());
         };

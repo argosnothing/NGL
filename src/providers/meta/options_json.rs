@@ -7,7 +7,6 @@ use sea_orm::ActiveValue::*;
 use sea_orm::DbErr;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use super::{ConfigProvider, TemplateProviderConfig};
 
@@ -22,7 +21,7 @@ impl OptionsJsonProvider {
         }
     }
 
-    async fn parse_options(&self, sink: Arc<dyn Sink>) -> Result<(), DbErr> {
+    async fn parse_options(&self, sink: &dyn Sink) -> Result<(), DbErr> {
         let json_str = fetch_source(&self.info.source)
             .await
             .map_err(|e| DbErr::Custom(format!("Failed to fetch source: {}", e)))?;
@@ -62,7 +61,7 @@ impl ConfigProvider for OptionsJsonProvider {
         &self.info
     }
 
-    async fn sync(&mut self, sink: Arc<dyn Sink>, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
+    async fn sync(&mut self, sink: &dyn Sink, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
         if kinds.contains(&NGLDataKind::Option) && self.info.kinds.contains(&NGLDataKind::Option) {
             self.parse_options(sink).await?;
         }

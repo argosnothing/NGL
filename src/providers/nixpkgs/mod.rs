@@ -9,7 +9,6 @@ use serde::Deserialize;
 use serde::de::{self, Deserializer, MapAccess, Visitor};
 use std::fmt;
 use std::io::Read;
-use std::sync::Arc;
 use tokio::sync::mpsc;
 
 pub mod schema;
@@ -33,7 +32,7 @@ impl Provider for NixPkgs {
         }
     }
 
-    async fn sync(&mut self, sink: Arc<dyn Sink>, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
+    async fn sync(&mut self, sink: &dyn Sink, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
         if !kinds.contains(&NGLDataKind::Package) {
             return Ok(());
         }

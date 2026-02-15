@@ -1,12 +1,12 @@
-use std::sync::Arc;
-
 use async_trait::async_trait;
 use chrono::Utc;
 use sea_orm::{ActiveValue::Set, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter};
 
 use crate::{
     NGLDataKind, NGLRequest,
-    db::entities::{provider, provider_kind_cache},
+    db::entities::{
+        example, function, guide, option, package, provider, provider_kind_cache, r#type,
+    },
     providers::{DbSink, ProviderInformation, Sink},
 };
 
@@ -38,7 +38,7 @@ pub trait Provider: Send {
     ///
     /// # Examples:
     /// ```ignore
-    /// async fn sync(&mut self, sink: Arc<dyn Sink>, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
+    /// async fn sync(&mut self, sink: &dyn Sink, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
     ///     if kinds.contains(&NGLDataKind::Function) {
     ///         for func in self.fetch_functions().await {
     ///             sink.emit(ProviderEvent::Function(func)).await?;
@@ -47,7 +47,7 @@ pub trait Provider: Send {
     ///     Ok(())
     /// }
     /// ```
-    async fn sync(&mut self, sink: Arc<dyn Sink>, kinds: &[NGLDataKind]) -> Result<(), DbErr>;
+    async fn sync(&mut self, sink: &dyn Sink, kinds: &[NGLDataKind]) -> Result<(), DbErr>;
 
     async fn refresh(
         &mut self,
@@ -111,8 +111,49 @@ pub trait Provider: Send {
             .exec(db)
             .await?;
 
-        let sink = Arc::new(DbSink::new(db.clone()));
-        self.sync(sink.clone(), &kinds_to_sync).await?;
+        for kind in &kinds_to_sync {
+            match kind {
+                NGLDataKind::Function => {
+                    function::Entity::delete_many()
+                        .filter(function::Column::ProviderName.eq(&info.name))
+                        .exec(db)
+                        .await?;
+                }
+                NGLDataKind::Example => {
+                    example::Entity::delete_many()
+                        .filter(example::Column::ProviderName.eq(&info.name))
+                        .exec(db)
+                        .await?;
+                }
+                NGLDataKind::Guide => {
+                    guide::Entity::delete_many()
+                        .filter(guide::Column::ProviderName.eq(&info.name))
+                        .exec(db)
+                        .await?;
+                }
+                NGLDataKind::Option => {
+                    option::Entity::delete_many()
+                        .filter(option::Column::ProviderName.eq(&info.name))
+                        .exec(db)
+                        .await?;
+                }
+                NGLDataKind::Package => {
+                    package::Entity::delete_many()
+                        .filter(package::Column::ProviderName.eq(&info.name))
+                        .exec(db)
+                        .await?;
+                }
+                NGLDataKind::Type => {
+                    r#type::Entity::delete_many()
+                        .filter(r#type::Column::ProviderName.eq(&info.name))
+                        .exec(db)
+                        .await?;
+                }
+            }
+        }
+
+        let sink = DbSink::new(db.clone());
+        self.sync(&sink, &kinds_to_sync).await?;
         sink.flush().await?;
 
         for kind in kinds_to_sync {

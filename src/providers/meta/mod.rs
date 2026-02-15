@@ -7,7 +7,6 @@ use crate::providers::{Provider, ProviderInformation};
 use crate::schema::NGLDataKind;
 use serde::Deserialize;
 use std::path::PathBuf;
-use std::sync::Arc;
 
 mod ndg_options_html;
 mod options_json;
@@ -71,7 +70,7 @@ pub trait ConfigProvider: Send {
 
     fn sync(
         &mut self,
-        sink: Arc<dyn Sink>,
+        sink: &dyn Sink,
         kinds: &[NGLDataKind],
     ) -> impl std::future::Future<Output = Result<(), sea_orm::DbErr>> + Send;
 }
@@ -84,7 +83,7 @@ impl<T: ConfigProvider> Provider for T {
 
     async fn sync(
         &mut self,
-        sink: Arc<dyn Sink>,
+        sink: &dyn Sink,
         kinds: &[NGLDataKind],
     ) -> Result<(), sea_orm::DbErr> {
         ConfigProvider::sync(self, sink, kinds).await

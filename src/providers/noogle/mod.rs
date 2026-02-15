@@ -13,7 +13,6 @@ use crate::{
 use async_trait::async_trait;
 use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
 use sea_orm::{ActiveValue::*, DbErr};
-use std::sync::Arc;
 
 static ENDPOINT_URL: &str = "https://noogle.dev/api/v1/data";
 
@@ -31,7 +30,7 @@ impl Provider for Noogle {
         }
     }
 
-    async fn sync(&mut self, sink: Arc<dyn Sink>, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
+    async fn sync(&mut self, sink: &dyn Sink, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
         let response = reqwest::get(ENDPOINT_URL)
             .await
             .map_err(|e| DbErr::Custom(e.to_string()))?
