@@ -3,6 +3,7 @@ use crate::NGLDataKind;
 pub mod example;
 pub mod function;
 pub mod guide;
+pub mod guide_xref;
 pub mod option;
 pub mod package;
 pub mod provider;

@@ -34,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
             NGLDataKind::Function,
             // NGLDataKind::Example,
             // NGLDataKind::Package,
-            // NGLDataKind::Option,
+            NGLDataKind::Option,
             // NGLDataKind::Guide,
         ]),
     };

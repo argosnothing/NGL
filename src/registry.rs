@@ -1,9 +1,11 @@
+#[cfg(feature = "nixos_manual")]
+use crate::providers::nixos_manual::NixosManual;
 #[cfg(feature = "nixpkgs")]
 use crate::providers::nixpkgs::NixPkgs;
 #[cfg(feature = "noogle")]
 use crate::providers::noogle::Noogle;
 use crate::{
-    providers::{Provider, meta::MetaProvider, nixos_manual::NixosManual},
+    providers::{Provider, meta::MetaProvider},
     schema::NGLRequest,
 };
 use futures::future::join_all;
@@ -36,14 +38,14 @@ impl ProviderRegistry {
         #[allow(unused_mut)]
         let mut providers: Vec<Box<dyn Provider + Send>> = vec![];
 
-        providers.push(Box::new(NixosManual::new()));
-
         // ADD YOUR PROVIDERS HERE, IDEALLY ALSO TIE THEM INTO A FEATURE
         // SO OTHER PROGRAMS CAN CHOOSE TO COMPILE THEM OUT
         #[cfg(feature = "noogle")]
         providers.push(Box::new(Noogle::new()));
         #[cfg(feature = "nixpkgs")]
         providers.push(Box::new(NixPkgs::new()));
+        #[cfg(feature = "nixos_manual")]
+        providers.push(Box::new(NixosManual::new()));
 
         if let Some(path) = config_path {
             match MetaProvider::from_file(&path) {

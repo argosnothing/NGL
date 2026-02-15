@@ -12,6 +12,7 @@ categories = ["command-line-utilities", "api-bindings"]
 [features]
 default = ["noogle"]
 noogle = []
+nixos_manual = []
 nixpkgs = ["dep:brotli2", "dep:regex", "dep:aws-config", "dep:aws-sdk-s3"]
 
 [dependencies]
