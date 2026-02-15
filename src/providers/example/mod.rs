@@ -1,3 +1,4 @@
+// not to be confused with the example `kind` :)
 // Copy paste this file when starting your own provider to make
 // your life a little bit easier.
 #![allow(unused)]
@@ -25,11 +26,16 @@ pub struct Example;
 // Example is to make it easier to get setup
 #[async_trait]
 impl Provider for Example {
+    /// Lets create a provider that creates a single function in the db called banana
     fn get_info(&self) -> ProviderInformation {
         ProviderInformation {
+            /// Name of the provider, needs to be unique provider name.
             name: PROVIDER_NAME.to_string(),
+            /// Provided by example.com :)
             source: "example.com".to_string(),
-            kinds: vec![NGLDataKind::Function, NGLDataKind::Example],
+            /// Supports providing function documentation only
+            kinds: vec![NGLDataKind::Function],
+            /// Syncs one time, and then virtually never syncs again :p
             sync_interval_hours: Some(u32::MAX),
         }
     }
@@ -69,7 +75,7 @@ impl Provider for Example {
         // rows. Have fun!
         sink.emit(ProviderEvent::Function(function::ActiveModel {
             id: NotSet,
-            name: Set("example name of func".to_string()),
+            name: Set("banana".to_string()),
             provider_name: Set(PROVIDER_NAME.to_string()),
             format: Set(DocumentationFormat::Markdown),
             signature: Set(Some("x, y -> v".to_string())),
