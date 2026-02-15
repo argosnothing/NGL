@@ -20,7 +20,7 @@ pub struct NixPkgs {}
 /// I had to do a lot of cursed things to prevent all the incoming data flooding ram, but it works
 /// pretty well considering how much data im having to work with, and it's not all happening
 /// in memory so that's what is important.
-impl NixPkgs { }
+impl NixPkgs {}
 
 #[async_trait]
 impl Provider for NixPkgs {
@@ -306,6 +306,7 @@ impl NixPkgs {
     }
 }
 
+// Potentially something I should move to utils.json and generify with kinds param
 // Warning: nonsense rust appeasement code ahead, make sense of it at own risk of insanity
 fn stream_packages_to_channel<R: Read>(
     reader: R,

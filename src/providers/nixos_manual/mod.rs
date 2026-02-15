@@ -18,7 +18,12 @@ pub struct NixosManual {}
 #[async_trait]
 impl Provider for NixosManual {
     async fn sync(&mut self, sink: Arc<dyn Sink>, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
-        todo!()
+        let Ok(result) = fetch_source(URL).await else {
+            return Ok(());
+        };
+
+        println!("{}", result);
+        Ok(())
     }
 
     fn get_info(&self) -> ProviderInformation {
@@ -29,4 +34,18 @@ impl Provider for NixosManual {
             sync_interval_hours: Some(u32::MAX),
         }
     }
+}
+
+// impl NixosManual {
+//     fn parse_html(html: &str) ->
+// }
+//
+
+// TODO: Guides can have subguides, we will need to change how a guide is structured in the db.
+// a self-referential many-to-many table on guides is probably the play here
+/// Oh boy... This will be fun. We
+struct NixosManualGuide {}
+struct NixosManualExample {
+    pub source: String,
+    pub data: String,
 }
