@@ -1,4 +1,5 @@
 # Contributing
+Please see the [example provider](./src/providers/example/mod.rs) for a full breakdown of the application lifecycle around making a provider
 
 ## Dev environment:  
 Nix develop is important, as I provide an env variable for nixpkgs if you end up compiling with that feature. It is by default compiled out on build as it can take time to cache, although i've taken some pains to make it memory efficientish.
