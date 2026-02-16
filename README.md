@@ -1,7 +1,11 @@
 # NGL - Nix Global Lookup
 
 A unified search and aggregation layer for Nix documentation.  
-https://github.com/user-attachments/assets/5e3bff9c-fd6e-43d2-81c5-46ba57693f06
+
+
+https://github.com/user-attachments/assets/e8b10047-7be6-4ba1-a903-a97057e926df
+
+
 
 
 ## The Problem  
