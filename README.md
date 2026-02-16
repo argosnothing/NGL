@@ -2,6 +2,7 @@
 
 A unified search and aggregation layer for Nix documentation.  
 
+<video src="https://github.com/argosnothing/NGL/blob/main/assets/Demo.mp4"></video>
 
 ## The Problem  
 Nix documentation is scattered across dozens of sources:
