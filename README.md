@@ -69,4 +69,4 @@ TBD
 
 NGL 
 
-<sub>connect all the dots.</sub>
+<sub>connect all the dots</sub>
