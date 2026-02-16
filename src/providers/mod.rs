@@ -1,12 +1,12 @@
 use crate::schema::NGLDataKind;
 
-pub mod sink;
+pub mod channel;
 
 pub mod meta;
 pub mod provider;
 
 pub use provider::Provider;
-pub use sink::{DbSink, ProviderEvent, Sink};
+pub use channel::{EventChannel, ProviderEvent, create_event_channel};
 
 #[cfg(feature = "example")]
 pub mod example;

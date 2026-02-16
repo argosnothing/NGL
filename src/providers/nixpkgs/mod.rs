@@ -1,5 +1,5 @@
 #![allow(unused)]
-use crate::providers::{Provider, ProviderEvent, Sink};
+use crate::providers::{Provider, ProviderEvent, EventChannel};
 use crate::schema::NGLDataKind;
 use async_trait::async_trait;
 use brotli2::read::BrotliDecoder;
@@ -32,7 +32,7 @@ impl Provider for NixPkgs {
         }
     }
 
-    async fn sync(&mut self, sink: &dyn Sink, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
+    async fn sync(&mut self, channel: &EventChannel, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
         if !kinds.contains(&NGLDataKind::Package) {
             return Ok(());
         }
@@ -44,7 +44,7 @@ impl Provider for NixPkgs {
             self.discover_release().await?
         };
 
-        self.fetch_packages_for_release(sink, release).await
+        self.fetch_packages_for_release(channel, release).await
     }
 }
 
@@ -154,7 +154,7 @@ impl NixPkgs {
 
     async fn fetch_packages_for_release(
         &self,
-        sink: Arc<dyn Sink>,
+        channel: &EventChannel,
         release: String,
     ) -> Result<(), DbErr> {
         let rel = release.trim_start_matches("nixpkgs/");
@@ -276,7 +276,7 @@ impl NixPkgs {
 
             let data = serde_json::to_string(&pkg_value).unwrap_or_default();
 
-            sink.emit(ProviderEvent::Package(
+            channel.send(ProviderEvent::Package(
                 crate::db::entities::package::ActiveModel {
                     id: NotSet,
                     provider_name: Set("nixpkgs".to_string()),
@@ -293,8 +293,7 @@ impl NixPkgs {
                     broken: Set(broken),
                     unfree: Set(unfree),
                 },
-            ))
-            .await?;
+            )).await;
         }
 
         parse_handle

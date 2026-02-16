@@ -1,6 +1,6 @@
 use crate::db::entities::option as option_entity;
 use crate::db::enums::documentation_format::DocumentationFormat;
-use crate::providers::{ProviderEvent, ProviderInformation, Sink};
+use crate::providers::{ProviderEvent, ProviderInformation, EventChannel};
 use crate::schema::NGLDataKind;
 use crate::utils::fetch_source;
 use sea_orm::ActiveValue::*;
@@ -21,7 +21,7 @@ impl OptionsJsonProvider {
         }
     }
 
-    async fn parse_options(&self, sink: &dyn Sink) -> Result<(), DbErr> {
+    async fn parse_options(&self, channel: &EventChannel) -> Result<(), DbErr> {
         let json_str = fetch_source(&self.info.source)
             .await
             .map_err(|e| DbErr::Custom(format!("Failed to fetch source: {}", e)))?;
@@ -40,7 +40,7 @@ impl OptionsJsonProvider {
 
             let data = serde_json::to_string(&opt).unwrap_or_default();
 
-            sink.emit(ProviderEvent::Option(option_entity::ActiveModel {
+            channel.send(ProviderEvent::Option(option_entity::ActiveModel {
                 id: NotSet,
                 provider_name: Set(self.info.name.clone()),
                 name: Set(name.clone()),
@@ -48,8 +48,7 @@ impl OptionsJsonProvider {
                 default_value: Set(default_value),
                 format: Set(DocumentationFormat::Markdown),
                 data: Set(data),
-            }))
-            .await?;
+            })).await;
         }
 
         Ok(())
@@ -61,9 +60,9 @@ impl ConfigProvider for OptionsJsonProvider {
         &self.info
     }
 
-    async fn sync(&mut self, sink: &dyn Sink, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
+    async fn sync(&mut self, channel: &EventChannel, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
         if kinds.contains(&NGLDataKind::Option) && self.info.kinds.contains(&NGLDataKind::Option) {
-            self.parse_options(sink).await?;
+            self.parse_options(channel).await?
         }
         Ok(())
     }

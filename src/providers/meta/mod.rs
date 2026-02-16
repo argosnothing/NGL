@@ -2,7 +2,7 @@
 //
 // Massive credit to nix-search-tv for the idea of config based templates.
 // https://github.com/3timeslazy/nix-search-tv
-use crate::providers::Sink;
+use crate::providers::EventChannel;
 use crate::providers::{Provider, ProviderInformation};
 use crate::schema::NGLDataKind;
 use serde::Deserialize;
@@ -70,7 +70,7 @@ pub trait ConfigProvider: Send {
 
     fn sync(
         &mut self,
-        sink: &dyn Sink,
+        channel: &EventChannel,
         kinds: &[NGLDataKind],
     ) -> impl std::future::Future<Output = Result<(), sea_orm::DbErr>> + Send;
 }
@@ -83,10 +83,10 @@ impl<T: ConfigProvider> Provider for T {
 
     async fn sync(
         &mut self,
-        sink: &dyn Sink,
+        channel: &EventChannel,
         kinds: &[NGLDataKind],
     ) -> Result<(), sea_orm::DbErr> {
-        ConfigProvider::sync(self, sink, kinds).await
+        ConfigProvider::sync(self, channel, kinds).await
     }
 }
 

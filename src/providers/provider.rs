@@ -7,7 +7,7 @@ use crate::{
     db::entities::{
         example, function, guide, option, package, provider, provider_kind_cache, r#type,
     },
-    providers::{DbSink, ProviderInformation, Sink},
+    providers::{EventChannel, ProviderInformation, create_event_channel},
 };
 
 #[async_trait]
@@ -29,7 +29,7 @@ pub trait Provider: Send {
 
     /// The role of the provider is to
     /// 1. Advertise what kind of data it can provide through `get_info()`
-    /// 2. Pull raw data from a source, transform it into our internal format, and emit it through the provided `Sink`.
+    /// 2. Pull raw data from a source, transform it into our internal format, and emit it through the provided emitter.
     /// 3. implement this `sync()` method that emits events representing the data it provides.
     /// -  A bit of clarifation, kinds advertised by ProviderInformation->kinds informs the
     ///    registry of what kinds the provider can work with.
@@ -38,16 +38,16 @@ pub trait Provider: Send {
     ///
     /// # Examples:
     /// ```ignore
-    /// async fn sync(&mut self, sink: &dyn Sink, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
+    /// async fn sync(&mut self, channel: &EventChannel, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
     ///     if kinds.contains(&NGLDataKind::Function) {
     ///         for func in self.fetch_functions().await {
-    ///             sink.emit(ProviderEvent::Function(func)).await?;
+    ///             channel.send(ProviderEvent::Function(func)).await;
     ///         }
     ///     }
     ///     Ok(())
     /// }
     /// ```
-    async fn sync(&mut self, sink: &dyn Sink, kinds: &[NGLDataKind]) -> Result<(), DbErr>;
+    async fn sync(&mut self, channel: &EventChannel, kinds: &[NGLDataKind]) -> Result<(), DbErr>;
 
     async fn refresh(
         &mut self,
@@ -152,9 +152,12 @@ pub trait Provider: Send {
             }
         }
 
-        let sink = DbSink::new(db.clone());
-        self.sync(&sink, &kinds_to_sync).await?;
-        sink.flush().await?;
+        let (channel, consumer_handle) = create_event_channel(db.clone());
+        self.sync(&channel, &kinds_to_sync).await?;
+        drop(channel);
+        consumer_handle
+            .await
+            .map_err(|e| DbErr::Custom(format!("Consumer task panicked: {}", e)))??;
 
         for kind in kinds_to_sync {
             let cache_model = provider_kind_cache::ActiveModel {

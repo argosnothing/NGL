@@ -2,7 +2,7 @@ use crate::db::entities::example as example_entity;
 use crate::db::entities::option as option_entity;
 use crate::db::enums::documentation_format::DocumentationFormat;
 use crate::db::enums::language::Language;
-use crate::providers::{ProviderEvent, ProviderInformation, Sink};
+use crate::providers::{ProviderEvent, ProviderInformation, EventChannel};
 use crate::schema::NGLDataKind;
 use crate::utils::fetch_source;
 use crate::utils::html_to_markdown;
@@ -25,7 +25,7 @@ impl NdgOptionsHtmlProvider {
 
     async fn parse_content(
         &self,
-        sink: &dyn Sink,
+        channel: &EventChannel,
         emit_options: bool,
         emit_examples: bool,
     ) -> Result<(), DbErr> {
@@ -43,7 +43,7 @@ impl NdgOptionsHtmlProvider {
                     .as_ref()
                     .map(|h| html_to_markdown(h))
                     .unwrap_or_default();
-                sink.emit(ProviderEvent::Option(option_entity::ActiveModel {
+                channel.send(ProviderEvent::Option(option_entity::ActiveModel {
                     id: NotSet,
                     provider_name: Set(self.info.name.clone()),
                     name: Set(opt.name.clone()),
@@ -51,19 +51,17 @@ impl NdgOptionsHtmlProvider {
                     default_value: Set(opt.default.clone()),
                     format: Set(DocumentationFormat::Markdown),
                     data: Set(markdown),
-                }))
-                .await?;
+                })).await;
             }
 
             if emit_examples {
                 for example in &opt.examples {
-                    sink.emit(ProviderEvent::Example(example_entity::ActiveModel {
+                    channel.send(ProviderEvent::Example(example_entity::ActiveModel {
                         id: NotSet,
                         provider_name: Set(self.info.name.clone()),
                         language: Set(Some(Language::Nix)),
                         data: Set(example.clone()),
-                    }))
-                    .await?;
+                    })).await;
                 }
             }
         }
@@ -77,14 +75,14 @@ impl ConfigProvider for NdgOptionsHtmlProvider {
         &self.info
     }
 
-    async fn sync(&mut self, sink: &dyn Sink, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
+    async fn sync(&mut self, channel: &EventChannel, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
         let emit_options =
             kinds.contains(&NGLDataKind::Option) && self.info.kinds.contains(&NGLDataKind::Option);
         let emit_examples = kinds.contains(&NGLDataKind::Example)
             && self.info.kinds.contains(&NGLDataKind::Example);
 
         if emit_options || emit_examples {
-            self.parse_content(sink, emit_options, emit_examples)
+            self.parse_content(channel, emit_options, emit_examples)
                 .await?;
         }
         Ok(())

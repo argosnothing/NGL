@@ -6,7 +6,7 @@ use crate::{
         enums::{documentation_format::DocumentationFormat, language::Language},
     },
     providers::{
-        Provider, ProviderEvent, ProviderInformation, Sink, noogle::schema::NoogleResponse,
+        Provider, ProviderEvent, ProviderInformation, EventChannel, noogle::schema::NoogleResponse,
     },
     schema::NGLDataKind,
 };
@@ -30,7 +30,7 @@ impl Provider for Noogle {
         }
     }
 
-    async fn sync(&mut self, sink: &dyn Sink, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
+    async fn sync(&mut self, channel: &EventChannel, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
         let response = reqwest::get(ENDPOINT_URL)
             .await
             .map_err(|e| DbErr::Custom(e.to_string()))?
@@ -67,7 +67,7 @@ impl Provider for Noogle {
                     .unwrap_or_default()
                 });
 
-                sink.emit(ProviderEvent::Function(function::ActiveModel {
+                channel.send(ProviderEvent::Function(function::ActiveModel {
                     id: NotSet,
                     name: Set(doc.meta.title.clone()),
                     provider_name: Set("noogle".to_owned()),
@@ -77,8 +77,7 @@ impl Provider for Noogle {
                     source_url: Set(source_url),
                     source_code_url: Set(source_code_url),
                     aliases: Set(aliases),
-                }))
-                .await?;
+                })).await;
             }
 
             if fetch_examples && !content.is_empty() {
@@ -103,13 +102,12 @@ impl Provider for Noogle {
                             if current_lang.as_deref() == Some("nix")
                                 && !current_code.trim().is_empty()
                             {
-                                sink.emit(ProviderEvent::Example(example::ActiveModel {
+                                channel.send(ProviderEvent::Example(example::ActiveModel {
                                     id: NotSet,
                                     provider_name: Set("noogle".to_owned()),
                                     language: Set(Some(Language::Nix)),
                                     data: Set(current_code.clone()),
-                                }))
-                                .await?;
+                                })).await;
                             }
                         }
                         _ => {}

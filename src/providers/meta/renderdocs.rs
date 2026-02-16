@@ -1,6 +1,6 @@
 use crate::db::entities::option as option_entity;
 use crate::db::enums::documentation_format::DocumentationFormat;
-use crate::providers::{ProviderEvent, ProviderInformation, Sink};
+use crate::providers::{ProviderEvent, ProviderInformation, EventChannel};
 use crate::schema::NGLDataKind;
 use crate::utils::{fetch_source, html_to_markdown};
 use scraper::{ElementRef, Html, Selector};
@@ -20,7 +20,7 @@ impl RenderDocsProvider {
         }
     }
 
-    async fn parse_options(&self, sink: &dyn Sink) -> Result<(), DbErr> {
+    async fn parse_options(&self, channel: &EventChannel) -> Result<(), DbErr> {
         let html = fetch_source(&self.info.source)
             .await
             .map_err(|e| DbErr::Custom(format!("Failed to fetch source: {}", e)))?;
@@ -33,7 +33,7 @@ impl RenderDocsProvider {
                 .raw_html
                 .map(|h| html_to_markdown(&h))
                 .unwrap_or_default();
-            sink.emit(ProviderEvent::Option(option_entity::ActiveModel {
+            channel.send(ProviderEvent::Option(option_entity::ActiveModel {
                 id: NotSet,
                 provider_name: Set(self.info.name.clone()),
                 name: Set(opt.name),
@@ -41,8 +41,7 @@ impl RenderDocsProvider {
                 default_value: Set(opt.default),
                 format: Set(DocumentationFormat::Markdown),
                 data: Set(markdown),
-            }))
-            .await?;
+            })).await;
         }
 
         Ok(())
@@ -54,9 +53,9 @@ impl ConfigProvider for RenderDocsProvider {
         &self.info
     }
 
-    async fn sync(&mut self, sink: &dyn Sink, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
+    async fn sync(&mut self, channel: &EventChannel, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
         if kinds.contains(&NGLDataKind::Option) && self.info.kinds.contains(&NGLDataKind::Option) {
-            self.parse_options(sink).await?;
+            self.parse_options(channel).await?
         }
         Ok(())
     }

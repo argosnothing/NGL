@@ -4,7 +4,7 @@ use sea_orm::DbErr;
 
 use crate::{
     NGLDataKind,
-    providers::{Provider, ProviderInformation, Sink},
+    providers::{Provider, ProviderInformation, EventChannel},
     utils::fetch_source,
 };
 
@@ -15,7 +15,7 @@ pub struct NixosManual {}
 
 #[async_trait]
 impl Provider for NixosManual {
-    async fn sync(&mut self, sink: &dyn Sink, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
+    async fn sync(&mut self, _channel: &EventChannel, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
         let Ok(result) = fetch_source(URL).await else {
             return Ok(());
         };
