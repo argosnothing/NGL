@@ -1,5 +1,4 @@
-# NGL - Nix Global Lookup
-
+# NGL - Nix Global Lookup 
 A unified search and aggregation layer for Nix documentation.  
 
 
@@ -69,3 +68,5 @@ In the future I plan on adding functionality to work with different schemas, sim
 TBD
 
 NGL 
+
+<sub>connect all the dots.</sub>
