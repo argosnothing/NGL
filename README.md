@@ -2,9 +2,6 @@
 
 A unified search and aggregation layer for Nix documentation.
 
-tmp.gqqFMOMPYD.mp4
-
-
 ## The Problem  
 Nix documentation is scattered across dozens of sources:
 - [noogle.dev](https://noogle.dev) for function documentation
