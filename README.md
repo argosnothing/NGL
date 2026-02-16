@@ -1,4 +1,4 @@
-# NGL - Nix Global Lookup 
+# Nix Global Lookup 
 A unified search and aggregation layer for Nix documentation.  
 
 
