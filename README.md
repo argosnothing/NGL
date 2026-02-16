@@ -48,7 +48,7 @@ Many providers are implemented, the major missing ones are nixos-manual for our 
 - nvf for options and examples ( web scrapped currently )
 
 - TODO: Guides will require a rework, as we need to express the relationship between a guide and its subguide, I don't want fts5 indexing on the entire content of a guide, but simply the guide, and subguide titles. 
-The API for responses is still up in the air, and i'm potentially relying on potential consumers of this API to tell me the data they care about for each kind that NGL offers. 
+The API for responses is still up in the air, and i'm currently relying on potential consumers of this API to tell me the data they care about for each kind that NGL offers. 
 
 Currently the language i'm going with is markdown for formatted data, this means the current html parses will provide you markdown data.
 
