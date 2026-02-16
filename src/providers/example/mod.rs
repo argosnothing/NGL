@@ -7,7 +7,7 @@ use crate::{
         entities::{example, function, guide, option, package, r#type},
         enums::{documentation_format::DocumentationFormat, language::Language},
     },
-    providers::{Provider, ProviderEvent, ProviderInformation, EventChannel},
+    providers::{EventChannel, Provider, ProviderEvent, ProviderInformation},
     schema::NGLDataKind,
 };
 use async_trait::async_trait;
@@ -50,19 +50,23 @@ impl Provider for Example {
     /// 1. The registry runs `refresh` on every provider that has relevant kinds of documentation it has in its providers vec.
     /// 2. that `refresh` does a few things,
     ///    1. manages when your sync will be ran ( using a configurable sync_interval_hours )
-    ///    2. adds your provider to the providers list
+    ///    2. Confirms if your provider has its own entry in db for caching. if it doesn't or the timer is up we will run your `sync`
     ///    3. builds a `kinds` vec based on the `kinds` from the `request` that need the provider to cache those kinds.
     ///       any kinds that are coming into the sync method are expected to be `emitted` at some point during the `sync`.
     ///    4. uses that `kinds` vec to *DELETE* existing kinds of data matching what will need to be cached
-    ///    5. creates a new eventchannel with its own database connection, what is this eventchannel?
+    ///    5. creates a new `EventChannel` with its own database connection, what is this `EventChannel`?
     ///       - NGL Providers use events to interact with the database, it does this through eventchannels, which act as a target
     ///         to emit those events to. I'll provide an example in the sync method body.
     ///       - One nifty feature of this EventChannel impl is that each providers eventchannel has their own internal buffer,
     ///         so when you start emitting events to the eventchannel you do not need to worry about batching your own data for the
-    ///         inserts. Just emit it as soon as its ready and the `eventchannel` will take care of the rest.
+    ///         inserts. Just emit it as soon as its ready and the `EventChannel` will take care of the rest.
+    ///       - Another note, send needs to have await, as it is blocking on the buffer being full. If it's full the block
+    ///         should ideally stop your parsing of the source data, but this is will be left up to you. If you want
+    ///         to completely build up a full vec of all the data from the source in memory and iterate it into send, nothing here
+    ///         can stop you, but ideally you would make use of the buffer that send uses to create back pressure on your parsing speed.
     ///    6. Finally, flushes any remaining eventchannel buffers ( by inserting those into db ) and then adds or updates an entry
     ///       to the `provider_kinds_cache` table to track when this synced happened for the next refresh :)
-    /// 3. The provider implements sync, which should
+    /// 3. Your provider implements sync, which should
     ///    1. get data from whatever source (api endpoint, html, even a local json file)
     ///    2. based on the `kinds` of data coming in, shapes whatever it gets from its own source
     ///       to one that satisfies the `kinds` of data coming in.
