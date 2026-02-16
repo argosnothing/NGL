@@ -4,6 +4,10 @@ A unified search and aggregation layer for Nix documentation.
 
 <video src="https://github.com/argosnothing/NGL/blob/main/assets/Demo.mp4"></video>
 
+
+https://github.com/user-attachments/assets/e4e666a5-ca3d-4cb4-b3aa-5d53fbf80bbe
+
+
 ## The Problem  
 Nix documentation is scattered across dozens of sources:
 - [noogle.dev](https://noogle.dev) for function documentation
