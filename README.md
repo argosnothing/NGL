@@ -3,11 +3,6 @@
 A unified search and aggregation layer for Nix documentation.  
 
 
-https://github.com/user-attachments/assets/e8b10047-7be6-4ba1-a903-a97057e926df
-
-
-
-
 ## The Problem  
 Nix documentation is scattered across dozens of sources:
 - [noogle.dev](https://noogle.dev) for function documentation
