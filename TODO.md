@@ -37,6 +37,7 @@ In no particular order...
   Could be very powerful for covering a ton of similar data, like blogs, etc. 
 - Implement a NGL frontend, although this would likely be a diff repo.
 - Merged responses: What if we could have a more intense kind of search that merges data from different providers intelligently in some way? 
+- Why do results sometimes come back in different order? hmmm
 
 
   
