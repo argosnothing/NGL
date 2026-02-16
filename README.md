@@ -2,7 +2,7 @@
 
 A unified search and aggregation layer for Nix documentation.
 
-https://cdn.discordapp.com/attachments/1428069304380817469/1472761721545556050/tmp.gqqFMOMPYD.mp4?ex=6993bfbd&is=69926e3d&hm=589b7dff98238eb7699e3a3576d6b47faf1a9dcaa3900ffd235a2d9d2f214fb6&
+
 
 ## The Problem  
 Nix documentation is scattered across dozens of sources:
