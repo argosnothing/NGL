@@ -27,6 +27,8 @@ pub struct Example;
 #[async_trait]
 impl Provider for Example {
     /// Lets create a provider that creates a single function in the db called banana
+    /// If you would like to view the result of this example, make sure the `example` feature is enabled in the cargo.toml
+    /// then run `./target/debug/ngl --kinds function banana` and it should pop up!
     fn get_info(&self) -> ProviderInformation {
         ProviderInformation {
             /// Name of the provider, needs to be unique provider name.
