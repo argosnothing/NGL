@@ -1,9 +1,11 @@
 use async_trait::async_trait;
 use chrono::Utc;
 use sea_orm::{ActiveValue::Set, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter};
+use std::sync::Arc;
 
 use crate::{
     NGLDataKind, NGLRequest,
+    cli::progress::SyncProgress,
     db::entities::{
         example, function, guide, option, package, provider, provider_kind_cache, r#type,
     },
@@ -53,6 +55,7 @@ pub trait Provider: Send {
         &mut self,
         db: &DatabaseConnection,
         request: NGLRequest,
+        sync_progress: &SyncProgress,
     ) -> Result<bool, DbErr> {
         let requested_kinds = request
             .kinds
@@ -82,7 +85,6 @@ pub trait Provider: Send {
             };
 
             if needs_sync {
-                println!("{} is Syncing data for {}", &info.name, &kind);
                 kinds_to_sync.push(kind.clone());
             }
         }
@@ -94,7 +96,6 @@ pub trait Provider: Send {
                 .iter()
                 .any(|provider_kind| requested_kinds.contains(provider_kind))
         {
-            println!("All requested kinds cached for {}", &info.name);
             return Ok(false);
         }
 
@@ -152,12 +153,27 @@ pub trait Provider: Send {
             }
         }
 
-        let (channel, consumer_handle) = create_event_channel(db.clone());
+        let progress = sync_progress.add_provider(&info.name);
+        let counts = Arc::clone(&progress.counts);
+        let (channel, consumer_handle) = create_event_channel(db.clone(), Some(counts));
+
+        // Spawn a task to update progress display periodically
+        let progress_clone = progress.clone();
+        let update_handle = tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+                progress_clone.update();
+            }
+        });
+
         self.sync(&channel, &kinds_to_sync).await?;
         drop(channel);
         consumer_handle
             .await
             .map_err(|e| DbErr::Custom(format!("Consumer task panicked: {}", e)))??;
+
+        update_handle.abort();
+        progress.finish();
 
         for kind in kinds_to_sync {
             let cache_model = provider_kind_cache::ActiveModel {

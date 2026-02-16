@@ -6,7 +6,7 @@ pub mod meta;
 pub mod provider;
 
 pub use provider::Provider;
-pub use channel::{EventChannel, ProviderEvent, create_event_channel};
+pub use channel::{EventChannel, ProviderEvent, SyncCounts, create_event_channel};
 
 #[cfg(feature = "example")]
 pub mod example;

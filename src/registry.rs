@@ -7,6 +7,7 @@ use crate::providers::nixpkgs::NixPkgs;
 #[cfg(feature = "noogle")]
 use crate::providers::noogle::Noogle;
 use crate::{
+    cli::progress::SyncProgress,
     providers::{Provider, meta::MetaProvider},
     schema::NGLRequest,
 };
@@ -63,6 +64,7 @@ impl ProviderRegistry {
             }
         }
 
+        let sync_progress = SyncProgress::new();
         let sync_futures: Vec<_> = providers
             .into_iter()
             .filter_map(|mut provider| {
@@ -75,7 +77,12 @@ impl ProviderRegistry {
                     Some({
                         let request_clone = request.clone();
                         let db_clone = db.clone();
-                        async move { provider.refresh(&db_clone, request_clone).await }
+                        let progress_clone = sync_progress.clone();
+                        async move {
+                            provider
+                                .refresh(&db_clone, request_clone, &progress_clone)
+                                .await
+                        }
                     })
                 } else {
                     None
