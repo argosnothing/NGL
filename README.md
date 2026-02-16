@@ -46,6 +46,9 @@ Many providers are implemented, the major missing ones are nixos-manual for our 
 - plasma manager for options and examples
 - hjem for options and examples ( web scrapped currently )
 - nvf for options and examples ( web scrapped currently )
+- Two template providers that generate the 4 providers above  
+  Any page that looks like the data from these last 4 sources can be added simply by
+  modifying [templates.json](./templates.json)
 
 - TODO: Guides will require a rework, as we need to express the relationship between a guide and its subguide, I don't want fts5 indexing on the entire content of a guide, but simply the guide, and subguide titles. 
 The API for responses is still up in the air, and i'm currently relying on potential consumers of this API to tell me the data they care about for each kind that NGL offers. 
