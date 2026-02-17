@@ -19,23 +19,51 @@ Several projects have been built to get data individually from these sources, bu
 
 ## The Solution
 
+NGL is a library that both pulls, and caches nix documentation data from many different sources.
+Two key concepts of ngl are `kinds` of data and `providers` of that data. 
+`kinds` are `packages`, `functions`, `options`, `guides` and `examples` and form the kind of data NGL will give you when you query it.
+In NGL a single query can potentially give you matches from various kinds of documentation if you need it to. 
+`providers` are ngl's way of splitting sources of information, and similarly to `kinds` you can make queries filtered by the `providers` you care about. 
+One key concept of NGL is if you make a query for a specific kind of data, or from a specific provider, NGL will only ever manage and sync from those sources.
+So while it is a unified lookup, it is also lazy in what data it manages. If you want to write a noogle.dev tui, you don't care about indexing nixpkgs, after all. 
 
-NGL provides a single search interface that:
-- **Queries multiple providers** automatically
-- **Normalizes heterogeneous data** into a consistent format
-- **Returns aggregated results** from all sources
-- **Caches locally** for fast offline access
-
-Search once, get documentation from everywhere.
-
-NGL is **NOT** a solution providing its own frontend.  
-It wants to be used in **YOUR** nix related documentation project.   
-### NGL emphasizes control over  
-- What *kind* of data gets synced
-- What providers (sources of data) you want to deal with. ( including their dependencies for feature flags)  
-All while letting you focus on your website/api/tui-app instead of document fetching, databases, caching, and whatever nonsense I had to do for the nixpkgs provider to not destroy your ram!   
-
-This means, you don't need to worry about additional bloat from data you don't care about using, only the data you want, from the sources you want for the things you want. 
+Here is an example NGL call:
+`cargo run -- --providers nixpkgs,noogle,hjem,nvf --kinds function,example,package lib.optional`
+On a fresh install with no database this with asynchronously pull data from those providers, with those kinds of data, and then query for lib.optional. 
+In the cli it returns something like this:
+```
+[
+  {
+    "provider_name": "noogle",
+    "matches": [
+      {
+        "data": {
+          "Function": {
+            "name": "lib.optional",
+            "signature": "optional :: bool -> a -> [a]\n",
+            "content": {
+              "Markdown": "\nReturn a singleton list or an empty list, depending on a boolean\nvalue.  Useful when building lists with optional elements\n(e.g. `++ optional (system == \"i686-linux\") firefox`).\n\n# Inputs\n\n`cond`\n\n: 1\\. Function argument\n\n`elem`\n\n: 2\\. Function argument\n\n# Type\n\n```\noptional :: bool -> a -> [a]\n```\n\n# Examples\n:::{.example}\n## `lib.lists.optional` usage example\n\n```nix\noptional true \"foo\"\n=> [ \"foo\" ]\noptional false \"foo\"\n=> [ ]\n```\n\n:::\n"
+            },
+            "source_url": "https://noogle.dev/f/lib/optional",
+            "source_code_url": "https://github.com/NixOS/nixpkgs/blob/dfcc8a7bfb5b581331aeb110204076188636c7a2//nix/store/20nxy7dhnm964yl154v1vmgblchqmxwm-source/lib/default.nix#L280",
+            "aliases": [
+              "lib.lists.optional"
+            ]
+          }
+        }
+      },
+    ]
+  },
+  {
+    "provider_name": "hjem",
+    "matches": [{
+      //... match data and so on
+    }]
+  }
+]
+```
+Notice the shape of the data and how its organized by provider. The idea of NGL is that to the consumer of NGL the source of the data should be agnostic to the format you receive that data in.
+In otherwords NGL's goal is to give you a single api for interacting with data that might be formatted differently in the source.
 
 ## Status
 
