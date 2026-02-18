@@ -50,6 +50,10 @@ fn parse_language_from_class(class_str: &str) -> Option<Language> {
     None
 }
 
+/// Pull out code blocks from markdown and return the content with
+/// those codeblocks swapped out for NGL Example Index templates
+/// These `NGL_EX` deliminators are used to in-place restitch examples in
+/// on requests that merge a host type with its example
 pub fn extract_examples_markdown(content: &str) -> (String, Vec<ExtractedExample>) {
     let re = Regex::new(r"```(\w*)\n([\s\S]*?)```").unwrap();
     let mut examples = Vec::new();
