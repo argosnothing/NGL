@@ -74,14 +74,16 @@ impl ProviderRegistry {
                         .as_ref()
                         .map_or(false, |kinds| kinds.contains(provider_kind))
                 }) {
+                    let provider_name = provider.get_info().name.clone();
                     Some({
                         let request_clone = request.clone();
                         let db_clone = db.clone();
                         let progress_clone = sync_progress.clone();
                         async move {
-                            provider
+                            let result = provider
                                 .refresh(&db_clone, request_clone, &progress_clone)
-                                .await
+                                .await;
+                            (provider_name, result)
                         }
                     })
                 } else {
@@ -93,10 +95,17 @@ impl ProviderRegistry {
         let results = join_all(sync_futures).await;
 
         let mut reindex = false;
-        for result in results {
-            let synced = result?;
-            if synced {
-                reindex = true;
+        let mut errors = Vec::new();
+        for (provider_name, result) in results {
+            match result {
+                Ok(synced) => {
+                    if synced {
+                        reindex = true;
+                    }
+                }
+                Err(e) => {
+                    errors.push(format!("{}: {}", provider_name, e));
+                }
             }
         }
 
@@ -104,6 +113,14 @@ impl ProviderRegistry {
             eprint!("Reindexing FTS5 tables...");
             crate::db::services::populate_fts5(db).await?;
         }
+
+        if !errors.is_empty() {
+            eprintln!("\nSync errors:");
+            for err in &errors {
+                eprintln!("  {}", err);
+            }
+        }
+
         Ok(())
     }
 }

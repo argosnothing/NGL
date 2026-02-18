@@ -1,15 +1,13 @@
 use async_trait::async_trait;
 use chrono::Utc;
-use sea_orm::{ActiveValue::Set, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter};
+use sea_orm::{ActiveValue::Set, DatabaseConnection, DbErr, EntityTrait};
 use std::sync::Arc;
 
 use crate::{
     NGLDataKind, NGLRequest,
     cli::progress::SyncProgress,
-    db::entities::{
-        example, function, guide, option, package, provider, provider_kind_cache, r#type,
-    },
-    providers::{EventChannel, ProviderInformation, create_event_channel},
+    db::entities::provider,
+    providers::{EventChannel, ProviderInformation, create_event_channel, sync},
 };
 
 #[async_trait]
@@ -63,42 +61,22 @@ pub trait Provider: Send {
             .ok_or_else(|| DbErr::Custom("No kinds specified in request".to_string()))?;
 
         let info = self.get_info();
-        let supported_kinds = info.kinds;
-        let mut kinds_to_sync = Vec::new();
-
-        for kind in requested_kinds {
-            if !supported_kinds.contains(kind) {
-                continue;
-            }
-
-            let cache_entry = provider_kind_cache::Entity::find()
-                .filter(provider_kind_cache::Column::ProviderName.eq(&info.name))
-                .filter(provider_kind_cache::Column::Kind.eq(format!("{:?}", kind)))
-                .one(db)
-                .await?;
-
-            let needs_sync = if let Some(entry) = cache_entry {
-                let age = Utc::now().signed_duration_since(entry.last_synced);
-                age >= chrono::Duration::hours(info.sync_interval_hours.unwrap_or(24) as i64)
-            } else {
-                true
-            };
-
-            if needs_sync {
-                kinds_to_sync.push(kind.clone());
-            }
-        }
+        let kinds_to_sync = sync::determine_kinds_to_sync(
+            db,
+            requested_kinds,
+            &info.kinds,
+            &info.name,
+            info.sync_interval_hours.unwrap_or(24) as i64,
+        )
+        .await?;
 
         if kinds_to_sync.is_empty()
-            && self
-                .get_info()
-                .kinds
-                .iter()
-                .any(|provider_kind| requested_kinds.contains(provider_kind))
+            && info.kinds.iter().any(|pk| requested_kinds.contains(pk))
         {
             return Ok(false);
         }
 
+        // Upsert provider record
         let provider_model = crate::db::entities::provider::ActiveModel {
             name: Set(info.name.clone()),
             last_updated: Set(Utc::now().into()),
@@ -113,51 +91,13 @@ pub trait Provider: Send {
             .await?;
 
         for kind in &kinds_to_sync {
-            match kind {
-                NGLDataKind::Function => {
-                    function::Entity::delete_many()
-                        .filter(function::Column::ProviderName.eq(&info.name))
-                        .exec(db)
-                        .await?;
-                }
-                NGLDataKind::Example => {
-                    example::Entity::delete_many()
-                        .filter(example::Column::ProviderName.eq(&info.name))
-                        .exec(db)
-                        .await?;
-                }
-                NGLDataKind::Guide => {
-                    guide::Entity::delete_many()
-                        .filter(guide::Column::ProviderName.eq(&info.name))
-                        .exec(db)
-                        .await?;
-                }
-                NGLDataKind::Option => {
-                    option::Entity::delete_many()
-                        .filter(option::Column::ProviderName.eq(&info.name))
-                        .exec(db)
-                        .await?;
-                }
-                NGLDataKind::Package => {
-                    package::Entity::delete_many()
-                        .filter(package::Column::ProviderName.eq(&info.name))
-                        .exec(db)
-                        .await?;
-                }
-                NGLDataKind::Type => {
-                    r#type::Entity::delete_many()
-                        .filter(r#type::Column::ProviderName.eq(&info.name))
-                        .exec(db)
-                        .await?;
-                }
-            }
+            sync::delete_provider_kind_data(db, kind, &info.name).await?;
         }
 
         let progress = sync_progress.add_provider(&info.name);
         let counts = Arc::clone(&progress.counts);
         let (channel, consumer_handle) = create_event_channel(db.clone(), Some(counts));
 
-        // Spawn a task to update progress display periodically
         let progress_clone = progress.clone();
         let update_handle = tokio::spawn(async move {
             loop {
@@ -175,24 +115,8 @@ pub trait Provider: Send {
         update_handle.abort();
         progress.finish();
 
-        for kind in kinds_to_sync {
-            let cache_model = provider_kind_cache::ActiveModel {
-                provider_name: Set(info.name.clone()),
-                kind: Set(format!("{:?}", kind)),
-                last_synced: Set(Utc::now().into()),
-            };
-            provider_kind_cache::Entity::insert(cache_model)
-                .on_conflict(
-                    sea_orm::sea_query::OnConflict::columns([
-                        provider_kind_cache::Column::ProviderName,
-                        provider_kind_cache::Column::Kind,
-                    ])
-                    .update_column(provider_kind_cache::Column::LastSynced)
-                    .to_owned(),
-                )
-                .exec(db)
-                .await?;
-        }
+        // Update cache timestamps
+        sync::update_kind_cache(db, &kinds_to_sync, &info.name).await?;
 
         Ok(true)
     }

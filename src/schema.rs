@@ -50,26 +50,47 @@ pub struct FunctionData {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GuideRef {
+    pub id: i32,
+    pub link: Option<String>,
+    pub title: Option<String>,
+}
+
+/// Reference to the parent entity that an example came from
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum SourceRef {
+    Guide(GuideRef),
+    Function { id: i32, link: Option<String> },
+    Option { id: i32, link: Option<String> },
+    Package { id: i32, link: Option<String> },
+    Type { id: i32, link: Option<String> },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExampleData {
     /// Code block parsed as plaintext with formatting preserved
     pub code: String,
     /// Language of the code block to give to the caller
     pub language: Option<String>,
+    /// Reference to the parent entity this example came from
+    pub source: Option<SourceRef>,
 }
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GuideData {
+    pub parent_guide: Option<GuideRef>,
+    /// Sub-guides that are children of this guide
+    pub sub_guides: Vec<GuideRef>,
+    /// A link to the guide, or section if this is a subguide.
+    pub link: String,
     /// The name of this guide, captured through either
     /// url route convention or by a header the provider
     /// can reliable connect with a guide's title.
     /// This is likely what i'll use initially for querying
     /// guides, at least till we get fts5 impl
     pub title: NGLRaw,
-    /// An entire guide
-    /// For now, and for simplicity
-    /// Guide will carry with them their own formatting
-    /// In this case markdown, and it's up to the caller
-    /// to parse this string in a way that works for display.
+    /// Body of the guide.
     pub content: NGLRaw,
 }
 

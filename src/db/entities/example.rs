@@ -14,6 +14,8 @@ pub struct Model {
 
     pub language: Option<Language>,
     pub data: String,
+    pub source_kind: Option<String>,
+    pub source_link: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

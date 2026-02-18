@@ -10,7 +10,7 @@ keywords = ["nix", "nixos", "documentation", "api"]
 categories = ["command-line-utilities", "api-bindings"]
 
 [features]
-default = ["example", "noogle", "nixpkgs"]
+default = ["example", "noogle", "nixpkgs", "nixos_manual"]
 noogle = []
 nixos_manual = []
 example = []
@@ -40,3 +40,4 @@ urlencoding = "2.1"
 strum_macros = "0.27.2"
 scraper = "0.22"
 html2md = "0.2"
+html-escape = "0.2.13"

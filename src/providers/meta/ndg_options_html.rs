@@ -2,7 +2,7 @@ use crate::db::entities::example as example_entity;
 use crate::db::entities::option as option_entity;
 use crate::db::enums::documentation_format::DocumentationFormat;
 use crate::db::enums::language::Language;
-use crate::providers::{ProviderEvent, ProviderInformation, EventChannel};
+use crate::providers::{LinkedExample, ProviderEvent, ProviderInformation, EventChannel};
 use crate::schema::NGLDataKind;
 use crate::utils::fetch_source;
 use crate::utils::html_to_markdown;
@@ -38,30 +38,60 @@ impl NdgOptionsHtmlProvider {
 
         for opt in options {
             if emit_options {
-                let markdown = opt
+                let mut markdown = opt
                     .raw_html
                     .as_ref()
                     .map(|h| html_to_markdown(h))
                     .unwrap_or_default();
-                channel.send(ProviderEvent::Option(option_entity::ActiveModel {
-                    id: NotSet,
-                    provider_name: Set(self.info.name.clone()),
-                    name: Set(opt.name.clone()),
-                    type_signature: Set(opt.option_type.clone()),
-                    default_value: Set(opt.default.clone()),
-                    format: Set(DocumentationFormat::Markdown),
-                    data: Set(markdown),
-                })).await;
-            }
 
-            if emit_examples {
-                for example in &opt.examples {
-                    channel.send(ProviderEvent::Example(example_entity::ActiveModel {
+                let linked_examples: Vec<LinkedExample> = if emit_examples {
+                    opt.examples
+                        .iter()
+                        .enumerate()
+                        .map(|(i, ex)| {
+                            let key = format!("ex{}", i);
+                            let placeholder = format!("{{{{NGL_EX:{}}}}}", key);
+                            markdown = markdown.replace(ex, &placeholder);
+                            LinkedExample {
+                                placeholder_key: key,
+                                model: example_entity::ActiveModel {
+                                    id: NotSet,
+                                    provider_name: Set(self.info.name.clone()),
+                                    language: Set(Some(Language::Nix)),
+                                    data: Set(ex.clone()),
+                                    source_kind: Set(Some(format!("{:?}", NGLDataKind::Option))),
+                                    source_link: Set(None),
+                                },
+                            }
+                        })
+                        .collect()
+                } else {
+                    vec![]
+                };
+
+                if linked_examples.is_empty() {
+                    channel.send(ProviderEvent::Option(option_entity::ActiveModel {
                         id: NotSet,
                         provider_name: Set(self.info.name.clone()),
-                        language: Set(Some(Language::Nix)),
-                        data: Set(example.clone()),
+                        name: Set(opt.name.clone()),
+                        type_signature: Set(opt.option_type.clone()),
+                        default_value: Set(opt.default.clone()),
+                        format: Set(DocumentationFormat::Markdown),
+                        data: Set(markdown),
                     })).await;
+                } else {
+                    channel.send(ProviderEvent::OptionWithExamples(
+                        option_entity::ActiveModel {
+                            id: NotSet,
+                            provider_name: Set(self.info.name.clone()),
+                            name: Set(opt.name.clone()),
+                            type_signature: Set(opt.option_type.clone()),
+                            default_value: Set(opt.default.clone()),
+                            format: Set(DocumentationFormat::Markdown),
+                            data: Set(markdown),
+                        },
+                        linked_examples,
+                    )).await;
                 }
             }
         }

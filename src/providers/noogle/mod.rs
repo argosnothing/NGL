@@ -3,15 +3,16 @@ mod schema;
 use crate::{
     db::{
         entities::{example, function},
-        enums::{documentation_format::DocumentationFormat, language::Language},
+        enums::documentation_format::DocumentationFormat,
     },
     providers::{
-        Provider, ProviderEvent, ProviderInformation, EventChannel, noogle::schema::NoogleResponse,
+        EventChannel, LinkedExample, Provider, ProviderEvent, ProviderInformation,
+        noogle::schema::NoogleResponse,
     },
     schema::NGLDataKind,
+    utils::extract_examples_markdown,
 };
 use async_trait::async_trait;
-use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
 use sea_orm::{ActiveValue::*, DbErr};
 
 static ENDPOINT_URL: &str = "https://noogle.dev/api/v1/data";
@@ -39,7 +40,6 @@ impl Provider for Noogle {
             .map_err(|e| DbErr::Custom(e.to_string()))?;
 
         let fetch_functions = kinds.contains(&NGLDataKind::Function);
-        let fetch_examples = kinds.contains(&NGLDataKind::Example);
         let upstream_rev = response.upstream_info.rev.clone();
 
         for doc in response.data {
@@ -67,51 +67,61 @@ impl Provider for Noogle {
                     .unwrap_or_default()
                 });
 
-                channel.send(ProviderEvent::Function(function::ActiveModel {
-                    id: NotSet,
-                    name: Set(doc.meta.title.clone()),
-                    provider_name: Set("noogle".to_owned()),
-                    format: Set(DocumentationFormat::Markdown),
-                    signature: Set(doc.meta.signature.clone()),
-                    data: Set(content.clone()),
-                    source_url: Set(source_url),
-                    source_code_url: Set(source_code_url),
-                    aliases: Set(aliases),
-                })).await;
-            }
+                let (processed_content, extracted) = extract_examples_markdown(&content);
 
-            if fetch_examples && !content.is_empty() {
-                let parser = Parser::new(content.as_str());
-                let mut in_code_block = false;
-                let mut current_lang: Option<String> = None;
-                let mut current_code = String::new();
+                let linked_examples: Vec<LinkedExample> = extracted
+                    .into_iter()
+                    .map(|ex| LinkedExample {
+                        placeholder_key: ex.placeholder_key,
+                        model: example::ActiveModel {
+                            id: NotSet,
+                            provider_name: Set("noogle".to_owned()),
+                            language: Set(ex.language),
+                            data: Set(ex.data),
+                            source_kind: Set(Some(format!("{:?}", NGLDataKind::Function))),
+                            source_link: Set(if doc.meta.path.is_empty() {
+                                None
+                            } else {
+                                Some(format!(
+                                    "https://github.com/NixOS/nixpkgs/blob/master/{}",
+                                    doc.meta.path.join("/")
+                                ))
+                            }),
+                        },
+                    })
+                    .collect();
 
-                for event in parser {
-                    match event {
-                        Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(lang))) => {
-                            in_code_block = true;
-                            current_lang = Some(lang.to_string());
-                            current_code.clear();
-                        }
-                        Event::Text(text) if in_code_block => {
-                            current_code.push_str(&text);
-                        }
-                        Event::End(TagEnd::CodeBlock) if in_code_block => {
-                            in_code_block = false;
-
-                            if current_lang.as_deref() == Some("nix")
-                                && !current_code.trim().is_empty()
-                            {
-                                channel.send(ProviderEvent::Example(example::ActiveModel {
-                                    id: NotSet,
-                                    provider_name: Set("noogle".to_owned()),
-                                    language: Set(Some(Language::Nix)),
-                                    data: Set(current_code.clone()),
-                                })).await;
-                            }
-                        }
-                        _ => {}
-                    }
+                if linked_examples.is_empty() {
+                    channel
+                        .send(ProviderEvent::Function(function::ActiveModel {
+                            id: NotSet,
+                            name: Set(doc.meta.title.clone()),
+                            provider_name: Set("noogle".to_owned()),
+                            format: Set(DocumentationFormat::Markdown),
+                            signature: Set(doc.meta.signature.clone()),
+                            data: Set(content),
+                            source_url: Set(source_url),
+                            source_code_url: Set(source_code_url),
+                            aliases: Set(aliases),
+                        }))
+                        .await;
+                } else {
+                    channel
+                        .send(ProviderEvent::FunctionWithExamples(
+                            function::ActiveModel {
+                                id: NotSet,
+                                name: Set(doc.meta.title.clone()),
+                                provider_name: Set("noogle".to_owned()),
+                                format: Set(DocumentationFormat::Markdown),
+                                signature: Set(doc.meta.signature.clone()),
+                                data: Set(processed_content),
+                                source_url: Set(source_url),
+                                source_code_url: Set(source_code_url),
+                                aliases: Set(aliases),
+                            },
+                            linked_examples,
+                        ))
+                        .await;
                 }
             }
         }

@@ -1,3 +1,4 @@
+#![allow(unused)]
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
@@ -26,3 +27,31 @@ pub enum Relation {
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+
+impl Related<super::guide::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::ParentGuide.def()
+    }
+}
+
+pub struct GuideToSubGuides;
+
+impl Linked for GuideToSubGuides {
+    type FromEntity = super::guide::Entity;
+    type ToEntity = super::guide::Entity;
+
+    fn link(&self) -> Vec<RelationDef> {
+        vec![Relation::ParentGuide.def().rev(), Relation::SubGuide.def()]
+    }
+}
+
+pub struct SubGuideToParents;
+
+impl Linked for SubGuideToParents {
+    type FromEntity = super::guide::Entity;
+    type ToEntity = super::guide::Entity;
+
+    fn link(&self) -> Vec<RelationDef> {
+        vec![Relation::SubGuide.def().rev(), Relation::ParentGuide.def()]
+    }
+}

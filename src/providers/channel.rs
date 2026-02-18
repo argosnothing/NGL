@@ -1,14 +1,20 @@
 #![allow(unused)]
 use crate::db::{
-    entities::{example, function, guide, option, package, r#type},
+    entities::{
+        example, function, function_example, guide, guide_example, guide_xref, option,
+        option_example, package, package_example, r#type, type_example,
+    },
     services::insert,
 };
-use sea_orm::{DatabaseConnection, DbErr};
+use sea_orm::{
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, DbErr, EntityTrait,
+    QueryFilter,
+};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use tokio::sync::mpsc;
 
-const BATCH_SIZE: usize = 150;
+const BATCH_SIZE: usize = 300;
 
 #[derive(Default)]
 pub struct SyncCounts {
@@ -60,11 +66,23 @@ impl SyncCounts {
 /// Carrier for event data.
 pub enum ProviderEvent {
     Function(function::ActiveModel),
+    FunctionWithExamples(function::ActiveModel, Vec<LinkedExample>),
     Example(example::ActiveModel),
     Guide(guide::ActiveModel),
+    GuideWithExamples(guide::ActiveModel, Vec<LinkedExample>),
+    /// Link a child guide to its parent
+    GuideXref(String, String),
     Option(option::ActiveModel),
+    OptionWithExamples(option::ActiveModel, Vec<LinkedExample>),
     Package(package::ActiveModel),
+    PackageWithExamples(package::ActiveModel, Vec<LinkedExample>),
     Type(r#type::ActiveModel),
+    TypeWithExamples(r#type::ActiveModel, Vec<LinkedExample>),
+}
+
+pub struct LinkedExample {
+    pub placeholder_key: String,
+    pub model: example::ActiveModel,
 }
 
 pub struct EventChannel {
@@ -85,7 +103,6 @@ impl EventChannel {
     /// })).await;
     /// ```
     pub async fn send(&self, event: ProviderEvent) {
-        // Ignore send errors - channel closed means consumer panicked
         let _ = self.sender.send(event).await;
     }
 }
@@ -114,6 +131,7 @@ async fn batch_consumer(
     let mut options: Vec<option::ActiveModel> = Vec::new();
     let mut packages: Vec<package::ActiveModel> = Vec::new();
     let mut types: Vec<r#type::ActiveModel> = Vec::new();
+    let mut guide_xrefs: Vec<(String, String)> = Vec::new();
 
     while let Some(event) = receiver.recv().await {
         match event {
@@ -147,6 +165,10 @@ async fn batch_consumer(
                     }
                 }
             }
+            ProviderEvent::GuideXref(parent_link, child_link) => {
+                // Defer processing until all guides are inserted
+                guide_xrefs.push((parent_link, child_link));
+            }
             ProviderEvent::Option(model) => {
                 options.push(model);
                 if options.len() >= BATCH_SIZE {
@@ -174,6 +196,101 @@ async fn batch_consumer(
                     insert(&db, types.drain(..).collect()).await?;
                     if let Some(ref c) = counts {
                         c.types.fetch_add(count, Ordering::Relaxed);
+                    }
+                }
+            }
+            ProviderEvent::FunctionWithExamples(func_model, linked_examples) => {
+                let func = func_model.insert(&db).await?;
+                if let Some(ref c) = counts {
+                    c.functions.fetch_add(1, Ordering::Relaxed);
+                }
+                for linked in linked_examples {
+                    let ex = linked.model.insert(&db).await?;
+                    function_example::ActiveModel {
+                        function_id: Set(func.id),
+                        example_id: Set(ex.id),
+                        placeholder_key: Set(linked.placeholder_key),
+                    }
+                    .insert(&db)
+                    .await?;
+                    if let Some(ref c) = counts {
+                        c.examples.fetch_add(1, Ordering::Relaxed);
+                    }
+                }
+            }
+            ProviderEvent::GuideWithExamples(guide_model, linked_examples) => {
+                let g = guide_model.insert(&db).await?;
+                if let Some(ref c) = counts {
+                    c.guides.fetch_add(1, Ordering::Relaxed);
+                }
+                for linked in linked_examples {
+                    let ex = linked.model.insert(&db).await?;
+                    guide_example::ActiveModel {
+                        guide_id: Set(g.id),
+                        example_id: Set(ex.id),
+                        placeholder_key: Set(linked.placeholder_key),
+                    }
+                    .insert(&db)
+                    .await?;
+                    if let Some(ref c) = counts {
+                        c.examples.fetch_add(1, Ordering::Relaxed);
+                    }
+                }
+            }
+            ProviderEvent::OptionWithExamples(opt_model, linked_examples) => {
+                let o = opt_model.insert(&db).await?;
+                if let Some(ref c) = counts {
+                    c.options.fetch_add(1, Ordering::Relaxed);
+                }
+                for linked in linked_examples {
+                    let ex = linked.model.insert(&db).await?;
+                    option_example::ActiveModel {
+                        option_id: Set(o.id),
+                        example_id: Set(ex.id),
+                        placeholder_key: Set(linked.placeholder_key),
+                    }
+                    .insert(&db)
+                    .await?;
+                    if let Some(ref c) = counts {
+                        c.examples.fetch_add(1, Ordering::Relaxed);
+                    }
+                }
+            }
+            ProviderEvent::PackageWithExamples(pkg_model, linked_examples) => {
+                let p = pkg_model.insert(&db).await?;
+                if let Some(ref c) = counts {
+                    c.packages.fetch_add(1, Ordering::Relaxed);
+                }
+                for linked in linked_examples {
+                    let ex = linked.model.insert(&db).await?;
+                    package_example::ActiveModel {
+                        package_id: Set(p.id),
+                        example_id: Set(ex.id),
+                        placeholder_key: Set(linked.placeholder_key),
+                    }
+                    .insert(&db)
+                    .await?;
+                    if let Some(ref c) = counts {
+                        c.examples.fetch_add(1, Ordering::Relaxed);
+                    }
+                }
+            }
+            ProviderEvent::TypeWithExamples(type_model, linked_examples) => {
+                let t = type_model.insert(&db).await?;
+                if let Some(ref c) = counts {
+                    c.types.fetch_add(1, Ordering::Relaxed);
+                }
+                for linked in linked_examples {
+                    let ex = linked.model.insert(&db).await?;
+                    type_example::ActiveModel {
+                        type_id: Set(t.id),
+                        example_id: Set(ex.id),
+                        placeholder_key: Set(linked.placeholder_key),
+                    }
+                    .insert(&db)
+                    .await?;
+                    if let Some(ref c) = counts {
+                        c.examples.fetch_add(1, Ordering::Relaxed);
                     }
                 }
             }
@@ -221,6 +338,28 @@ async fn batch_consumer(
         insert(&db, types).await?;
         if let Some(ref c) = counts {
             c.types.fetch_add(count, Ordering::Relaxed);
+        }
+    }
+
+    if !guide_xrefs.is_empty() {
+        for (parent_link, child_link) in guide_xrefs {
+            let parent = guide::Entity::find()
+                .filter(guide::Column::Link.eq(&parent_link))
+                .one(&db)
+                .await?;
+            let child = guide::Entity::find()
+                .filter(guide::Column::Link.eq(&child_link))
+                .one(&db)
+                .await?;
+
+            if let (Some(p), Some(c)) = (parent, child) {
+                let _ = guide_xref::ActiveModel {
+                    guide_id: Set(p.id),
+                    sub_guide_id: Set(c.id),
+                }
+                .insert(&db)
+                .await;
+            }
         }
     }
 
