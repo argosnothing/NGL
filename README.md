@@ -122,23 +122,7 @@ Results are grouped by provider, but share a consistent structure so consumers c
 * hjem
 * nvf
 
-Template providers allow adding new sources by editing:
-
-```
-templates.json
-```
-
----
-
-## Guides (Planned)
-
-Guide support requires modeling relationships between guides and subguides.
-
-Planned behavior:
-
-* index guide and subguide titles
-* avoid full-text indexing entire manuals
-* expose structured navigation
+Template providers allow adding new sources by editing [templates.json](./templates.json) (currently only in the crate)
 
 ---
 
