@@ -171,12 +171,7 @@ Implement the required methods from the `Provider` trait and the data can be ing
 
 The goal is to support the entire Nix ecosystem.
 
-See:
-
-```
-CONTRIBUTING.md
-```
-
+See: [contributing](./CONTRIBUTING.md)
 ---
 
 ## License
