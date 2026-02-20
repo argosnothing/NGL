@@ -9,10 +9,12 @@ use serde::Deserialize;
 use std::path::PathBuf;
 
 mod ndg_options_html;
+mod ndg_search_options;
 mod options_json;
 mod renderdocs;
 
 pub use ndg_options_html::NdgOptionsHtmlProvider;
+pub use ndg_search_options::NdgSearchOptionProvider;
 pub use options_json::OptionsJsonProvider;
 pub use renderdocs::RenderDocsProvider;
 
@@ -136,6 +138,7 @@ impl MetaProvider {
             "renderdocs" => Some(Box::new(RenderDocsProvider::from_config(cfg))),
             "options_json" => Some(Box::new(OptionsJsonProvider::from_config(cfg))),
             "ndg_options_html" => Some(Box::new(NdgOptionsHtmlProvider::from_config(cfg))),
+            "ndg_search_options" => Some(Box::new(NdgSearchOptionProvider::from_config(cfg))),
             unknown => {
                 eprintln!("Warning: unknown template type '{}', skipping", unknown);
                 None

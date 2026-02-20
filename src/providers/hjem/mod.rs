@@ -1,10 +1,12 @@
-use crate::providers::{Provider, EventChannel};
+use crate::providers::{EventChannel, Provider};
 use crate::schema::NGLDataKind;
 use async_trait::async_trait;
 use sea_orm::DbErr;
 
 #[allow(unused)]
 pub struct HjemDocs;
+
+static ENDPOINT_URL: &str = "https://hjem.feel-co.org/assets/search-data.json";
 
 #[async_trait]
 impl Provider for HjemDocs {

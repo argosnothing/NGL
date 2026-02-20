@@ -14,7 +14,7 @@
     },
     {
       "template": "ndg_options_html",
-      "name": "hjem",
+      "name": "hjem2",
       "source": "https://hjem.feel-co.org/options.html",
       "kinds": ["options", "examples"]
     },
@@ -23,6 +23,12 @@
       "name": "nvf",
       "source": "https://nvf.notashelf.dev/options.html",
       "kinds": ["options", "examples"]
+    },
+    {
+      "template": "ndg_search_options",
+      "name": "hjem",
+      "source": "https://hjem.feel-co.org/assets/search-data.json",
+      "kinds": ["options"]
     }
   ]
 }
