@@ -1,9 +1,6 @@
 #![allow(unused)]
 use crate::db::{
-    entities::{
-        example, function, function_example, guide, guide_example, guide_xref, option,
-        option_example, package, package_example, r#type, type_example,
-    },
+    entities::{example, function, guide, guide_xref, option, package, r#type},
     services::insert,
 };
 use sea_orm::{

@@ -1,7 +1,7 @@
+use sea_orm::{DeriveActiveEnum, EnumIter};
 // Base schema defining the language of NGL data structure
 // Defines components of an NGLRequest and an NGLResponse
 use serde::{Deserialize, Serialize};
-use strum_macros::Display;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NGLRequest {
@@ -56,26 +56,17 @@ pub struct GuideRef {
     pub title: Option<String>,
 }
 
-/// Reference to the parent entity that an example came from
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum SourceRef {
-    Guide(GuideRef),
-    Function { id: i32, link: Option<String> },
-    Option { id: i32, link: Option<String> },
-    Package { id: i32, link: Option<String> },
-    Type { id: i32, link: Option<String> },
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExampleData {
     /// Code block parsed as plaintext with formatting preserved
     pub code: String,
     /// Language of the code block to give to the caller
     pub language: Option<String>,
-    /// Reference to the parent entity this example came from
-    pub source: Option<SourceRef>,
+    /// Link to parent documenation
+    pub source_link: Option<String>,
+    /// data kind
+    pub source_kind: Option<NGLDataKind>,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GuideData {
@@ -121,13 +112,22 @@ pub struct TypeData {
     pub description: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, DeriveActiveEnum, EnumIter,
+)]
+#[sea_orm(rs_type = "i32", db_type = "Integer")]
 pub enum NGLDataKind {
+    #[sea_orm(num_value = 0)]
     Function,
+    #[sea_orm(num_value = 1)]
     Example,
+    #[sea_orm(num_value = 2)]
     Guide,
+    #[sea_orm(num_value = 3)]
     Option,
+    #[sea_orm(num_value = 4)]
     Package,
+    #[sea_orm(num_value = 5)]
     Type,
 }
 

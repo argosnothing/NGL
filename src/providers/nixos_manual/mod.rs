@@ -9,7 +9,7 @@ use crate::{
         entities::{example, guide},
         enums::documentation_format::DocumentationFormat,
     },
-    providers::{EventChannel, LinkedExample, Provider, ProviderEvent, ProviderInformation},
+    providers::{EventChannel, Provider, ProviderEvent, ProviderInformation},
     utils::{extract_examples_html, fetch_source},
 };
 
@@ -44,69 +44,6 @@ impl Provider for NixosManual {
         let mut id_to_temp: std::collections::HashMap<String, String> =
             std::collections::HashMap::new();
 
-        for guide in &guides {
-            id_to_temp.insert(guide.id.clone(), guide.id.clone());
-
-            let (processed_content, extracted) = if include_examples {
-                extract_examples_html(&guide.content_html)
-            } else {
-                (guide.content_html.clone(), vec![])
-            };
-
-            let linked_examples: Vec<LinkedExample> = extracted
-                .into_iter()
-                .map(|ex| LinkedExample {
-                    placeholder_key: ex.placeholder_key,
-                    model: example::ActiveModel {
-                        id: NotSet,
-                        provider_name: Set(PROVIDER_NAME.to_owned()),
-                        language: Set(ex.language),
-                        data: Set(ex.data),
-                        source_kind: Set(Some(format!("{:?}", NGLDataKind::Guide))),
-                        source_link: Set(Some(guide.link.clone())),
-                    },
-                })
-                .collect();
-
-            // Only emit based on what kinds are requested
-            match (include_guides, include_examples) {
-                (true, true) if !linked_examples.is_empty() => {
-                    // Emit guide with linked examples
-                    channel
-                        .send(ProviderEvent::GuideWithExamples(
-                            guide::ActiveModel {
-                                id: NotSet,
-                                provider_name: Set(PROVIDER_NAME.to_owned()),
-                                title: Set(guide.title.clone()),
-                                format: Set(DocumentationFormat::HTML),
-                                data: Set(processed_content),
-                                link: Set(guide.link.clone()),
-                            },
-                            linked_examples,
-                        ))
-                        .await;
-                }
-                (true, _) => {
-                    channel
-                        .send(ProviderEvent::Guide(guide::ActiveModel {
-                            id: NotSet,
-                            provider_name: Set(PROVIDER_NAME.to_owned()),
-                            title: Set(guide.title.clone()),
-                            format: Set(DocumentationFormat::HTML),
-                            data: Set(processed_content),
-                            link: Set(guide.link.clone()),
-                        }))
-                        .await;
-                }
-                (false, true) => {
-                    for ex in linked_examples {
-                        channel.send(ProviderEvent::Example(ex.model)).await;
-                    }
-                }
-                (false, false) => unreachable!(), // Already handled above
-            }
-        }
-
         if include_guides {
             for guide in &guides {
                 if let Some(ref parent_id) = guide.parent_id {
@@ -115,6 +52,40 @@ impl Provider for NixosManual {
                         .send(ProviderEvent::GuideXref(parent_link, guide.link.clone()))
                         .await;
                 }
+            }
+        }
+
+        for guide in &guides {
+            id_to_temp.insert(guide.id.clone(), guide.id.clone());
+
+            if include_examples {
+                let examples = extract_examples_html(&guide.content_html);
+
+                for example in examples {
+                    channel
+                        .send(ProviderEvent::Example(example::ActiveModel {
+                            id: NotSet,
+                            provider_name: Set(PROVIDER_NAME.to_owned()),
+                            language: Set(example.language),
+                            data: Set(example.data),
+                            source_kind: Set(Some(NGLDataKind::Guide)),
+                            source_link: Set(Some(guide.link.to_owned())),
+                        }))
+                        .await;
+                }
+            }
+
+            if include_guides {
+                channel
+                    .send(ProviderEvent::Guide(guide::ActiveModel {
+                        id: NotSet,
+                        provider_name: Set(PROVIDER_NAME.to_owned()),
+                        title: Set(guide.title.clone()),
+                        format: Set(DocumentationFormat::HTML),
+                        data: Set(guide.content_html.to_owned()),
+                        link: Set(guide.link.clone()),
+                    }))
+                    .await;
             }
         }
 

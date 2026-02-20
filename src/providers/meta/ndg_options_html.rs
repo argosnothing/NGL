@@ -40,17 +40,17 @@ impl NdgOptionsHtmlProvider {
                 .as_ref()
                 .map(|h| html_to_markdown(h))
                 .unwrap_or_default();
-            if kinds.contains(&NGLDataKind::Example) {
-                opt.examples.into_iter().map(|example| {
-                    channel.send(ProviderEvent::Example(example::ActiveModel {
+            for example in opt.examples {
+                channel
+                    .send(ProviderEvent::Example(example::ActiveModel {
                         id: NotSet,
                         provider_name: Set(self.info.name.clone()),
                         language: Set(Some(Language::Nix)),
                         data: Set(example),
-                        source_kind: Set(Some(format!("{:?}", NGLDataKind::Option))),
+                        source_kind: Set(Some(NGLDataKind::Option)),
                         source_link: Set(None),
-                    }));
-                });
+                    }))
+                    .await;
             }
             if kinds.contains(&NGLDataKind::Option) {
                 channel

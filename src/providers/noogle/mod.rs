@@ -6,8 +6,7 @@ use crate::{
         enums::documentation_format::DocumentationFormat,
     },
     providers::{
-        EventChannel, LinkedExample, Provider, ProviderEvent, ProviderInformation,
-        noogle::schema::NoogleResponse,
+        EventChannel, Provider, ProviderEvent, ProviderInformation, noogle::schema::NoogleResponse,
     },
     schema::NGLDataKind,
     utils::extract_examples_markdown,
@@ -61,23 +60,25 @@ impl Provider for Noogle {
             });
             if fetch_examples {
                 let extracted_examples = extract_examples_markdown(&content);
-                extracted_examples.into_iter().map(|example| {
-                    channel.send(ProviderEvent::Example(example::ActiveModel {
-                        id: NotSet,
-                        provider_name: Set("noogle".to_owned()),
-                        language: Set(example.language),
-                        data: Set(example.data),
-                        source_kind: Set(Some(format!("{:?}", NGLDataKind::Function))),
-                        source_link: Set(if doc.meta.path.is_empty() {
-                            None
-                        } else {
-                            Some(format!(
-                                "https://github.com/NixOS/nixpkgs/blob/master/{}",
-                                doc.meta.path.join("/")
-                            ))
-                        }),
-                    }))
-                });
+                for example in extracted_examples {
+                    channel
+                        .send(ProviderEvent::Example(example::ActiveModel {
+                            id: NotSet,
+                            provider_name: Set("noogle".to_owned()),
+                            language: Set(example.language),
+                            data: Set(example.data),
+                            source_kind: Set(Some(NGLDataKind::Function)),
+                            source_link: Set(if doc.meta.path.is_empty() {
+                                None
+                            } else {
+                                Some(format!(
+                                    "https://github.com/NixOS/nixpkgs/blob/master/{}",
+                                    doc.meta.path.join("/")
+                                ))
+                            }),
+                        }))
+                        .await
+                }
             }
             if fetch_functions {
                 let aliases = doc.meta.aliases.as_ref().map(|a| {

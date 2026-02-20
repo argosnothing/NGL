@@ -1,6 +1,6 @@
 use crate::db::entities::option as option_entity;
 use crate::db::enums::documentation_format::DocumentationFormat;
-use crate::providers::{ProviderEvent, ProviderInformation, EventChannel};
+use crate::providers::{EventChannel, ProviderEvent, ProviderInformation};
 use crate::schema::NGLDataKind;
 use crate::utils::fetch_source;
 use sea_orm::ActiveValue::*;
@@ -40,15 +40,17 @@ impl OptionsJsonProvider {
 
             let data = serde_json::to_string(&opt).unwrap_or_default();
 
-            channel.send(ProviderEvent::Option(option_entity::ActiveModel {
-                id: NotSet,
-                provider_name: Set(self.info.name.clone()),
-                name: Set(name.clone()),
-                type_signature: Set(opt.option_type),
-                default_value: Set(default_value),
-                format: Set(DocumentationFormat::Markdown),
-                data: Set(data),
-            })).await;
+            channel
+                .send(ProviderEvent::Option(option_entity::ActiveModel {
+                    id: NotSet,
+                    provider_name: Set(self.info.name.clone()),
+                    name: Set(name.clone()),
+                    type_signature: Set(opt.option_type),
+                    default_value: Set(default_value),
+                    format: Set(DocumentationFormat::Markdown),
+                    data: Set(data),
+                }))
+                .await;
         }
 
         Ok(())

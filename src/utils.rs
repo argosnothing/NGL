@@ -12,9 +12,9 @@ pub fn extract_examples_html(content: &str) -> Vec<ExtractedExample> {
             .unwrap();
     let mut examples = Vec::new();
 
-    re.captures_iter(content).map(|caps| {
-        let class_str = caps.get(1).map(|m| m.as_str()).unwrap_or("");
-        let code = caps.get(2).map(|m| m.as_str()).unwrap_or("");
+    for capture in re.captures_iter(content).into_iter() {
+        let class_str = capture.get(1).map(|m| m.as_str()).unwrap_or("");
+        let code = capture.get(2).map(|m| m.as_str()).unwrap_or("");
 
         let language = parse_language_from_class(class_str);
 
@@ -22,7 +22,7 @@ pub fn extract_examples_html(content: &str) -> Vec<ExtractedExample> {
             language,
             data: html_escape::decode_html_entities(code).to_string(),
         });
-    });
+    }
 
     examples
 }
@@ -47,9 +47,9 @@ pub fn extract_examples_markdown(content: &str) -> Vec<ExtractedExample> {
     let re = Regex::new(r"```(\w*)\n([\s\S]*?)```").unwrap();
     let mut examples = Vec::new();
 
-    re.captures_iter(content).map(|elem| {
-        let lang_str = elem.get(1).map(|m| m.as_str()).unwrap_or("");
-        let code = elem.get(2).map(|m| m.as_str()).unwrap_or("");
+    for capture in re.captures_iter(content) {
+        let lang_str = capture.get(1).map(|m| m.as_str()).unwrap_or("");
+        let code = capture.get(2).map(|m| m.as_str()).unwrap_or("");
 
         examples.push(ExtractedExample {
             language: match lang_str.to_lowercase().as_str() {
@@ -58,7 +58,7 @@ pub fn extract_examples_markdown(content: &str) -> Vec<ExtractedExample> {
             },
             data: code.to_string(),
         });
-    });
+    }
 
     examples
 }

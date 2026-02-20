@@ -369,16 +369,6 @@ enum GuideXref {
 }
 
 #[derive(DeriveIden)]
-#[sea_orm(iden = "guide_examples")]
-enum GuideExample {
-    #[allow(unused)]
-    Table,
-    GuideId,
-    ExampleId,
-    PlaceholderKey,
-}
-
-#[derive(DeriveIden)]
 #[sea_orm(iden = "options")]
 enum Option {
     #[allow(unused)]

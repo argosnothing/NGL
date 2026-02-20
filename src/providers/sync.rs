@@ -4,8 +4,7 @@ use sea_orm::{ActiveValue::Set, ColumnTrait, DatabaseConnection, DbErr, EntityTr
 use crate::{
     NGLDataKind,
     db::entities::{
-        example, function, guide, guide_example, guide_xref, option, package, provider_kind_cache,
-        r#type,
+        example, function, guide, guide_xref, option, package, provider_kind_cache, r#type,
     },
 };
 
@@ -99,19 +98,6 @@ pub async fn delete_provider_kind_data(
                 .await?;
         }
         NGLDataKind::Example => {
-            let guide_ids: Vec<i32> = guide::Entity::find()
-                .filter(guide::Column::ProviderName.eq(provider_name))
-                .all(db)
-                .await?
-                .into_iter()
-                .map(|g| g.id)
-                .collect();
-            if !guide_ids.is_empty() {
-                guide_example::Entity::delete_many()
-                    .filter(guide_example::Column::GuideId.is_in(guide_ids))
-                    .exec(db)
-                    .await?;
-            }
             example::Entity::delete_many()
                 .filter(example::Column::ProviderName.eq(provider_name))
                 .exec(db)
@@ -132,10 +118,6 @@ pub async fn delete_provider_kind_data(
                     .await?;
                 guide_xref::Entity::delete_many()
                     .filter(guide_xref::Column::SubGuideId.is_in(guide_ids.clone()))
-                    .exec(db)
-                    .await?;
-                guide_example::Entity::delete_many()
-                    .filter(guide_example::Column::GuideId.is_in(guide_ids))
                     .exec(db)
                     .await?;
             }

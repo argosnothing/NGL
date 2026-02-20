@@ -5,15 +5,11 @@ use sea_orm::{
 };
 
 use crate::{
-    db::entities::{
-        NGLDataEntity, example, function, function_example, guide, guide_example, guide_xref,
-        option, option_example, package, package_example, r#type, type_example,
-    },
+    db::entities::{NGLDataEntity, example, function, guide, guide_xref, option, package, r#type},
     schema::{
         ExampleData, FunctionData, GuideData, GuideRef, NGLData, NGLDataKind, NGLDataVariant,
-        NGLRaw, NGLRequest, NGLResponse, OptionData, PackageData, SourceRef, TypeData,
+        NGLRaw, NGLRequest, NGLResponse, OptionData, PackageData, TypeData,
     },
-    utils::{stitch_examples, strip_placeholders},
 };
 
 #[derive(FromQueryResult)]
@@ -210,31 +206,15 @@ async fn fetch_function(
         .await?
         .ok_or_else(|| DbErr::RecordNotFound(format!("Function {}", id)))?;
 
-    let processed_data = if include_examples {
-        let linked = function_example::Entity::find()
-            .filter(function_example::Column::FunctionId.eq(id))
-            .find_also_related(example::Entity)
-            .all(db)
-            .await?;
-
-        let example_pairs: Vec<_> = linked
-            .into_iter()
-            .filter_map(|(join, ex)| ex.map(|e| (join.placeholder_key, e.data)))
-            .collect();
-        stitch_examples(&model.data, &example_pairs)
-    } else {
-        strip_placeholders(&model.data)
-    };
-
     let content = match model.format {
         crate::db::enums::documentation_format::DocumentationFormat::Markdown => {
-            NGLRaw::Markdown(processed_data)
+            NGLRaw::Markdown(model.data)
         }
         crate::db::enums::documentation_format::DocumentationFormat::HTML => {
-            NGLRaw::HTML(processed_data)
+            NGLRaw::HTML(model.data)
         }
         crate::db::enums::documentation_format::DocumentationFormat::PlainText => {
-            NGLRaw::PlainText(processed_data)
+            NGLRaw::PlainText(model.data)
         }
     };
 
@@ -256,62 +236,12 @@ async fn fetch_example(db: &DatabaseConnection, id: i32) -> Result<NGLData, DbEr
         .await?
         .ok_or_else(|| DbErr::RecordNotFound(format!("Example {}", id)))?;
 
-    let source = if let Some(join) = guide_example::Entity::find()
-        .filter(guide_example::Column::ExampleId.eq(id))
-        .one(db)
-        .await?
-    {
-        let guide_model = guide::Entity::find_by_id(join.guide_id).one(db).await?;
-        Some(SourceRef::Guide(GuideRef {
-            id: join.guide_id,
-            link: guide_model.map(|g| g.link),
-            title: None,
-        }))
-    } else if let Some(join) = function_example::Entity::find()
-        .filter(function_example::Column::ExampleId.eq(id))
-        .one(db)
-        .await?
-    {
-        Some(SourceRef::Function {
-            id: join.function_id,
-            link: model.source_link.clone(),
-        })
-    } else if let Some(join) = option_example::Entity::find()
-        .filter(option_example::Column::ExampleId.eq(id))
-        .one(db)
-        .await?
-    {
-        Some(SourceRef::Option {
-            id: join.option_id,
-            link: model.source_link.clone(),
-        })
-    } else if let Some(join) = package_example::Entity::find()
-        .filter(package_example::Column::ExampleId.eq(id))
-        .one(db)
-        .await?
-    {
-        Some(SourceRef::Package {
-            id: join.package_id,
-            link: model.source_link.clone(),
-        })
-    } else if let Some(join) = type_example::Entity::find()
-        .filter(type_example::Column::ExampleId.eq(id))
-        .one(db)
-        .await?
-    {
-        Some(SourceRef::Type {
-            id: join.type_id,
-            link: model.source_link.clone(),
-        })
-    } else {
-        None
-    };
-
     Ok(NGLData {
         data: NGLDataVariant::Example(ExampleData {
             code: model.data,
             language: model.language.map(|lang| lang.to_string()),
-            source,
+            source_link: model.source_link,
+            source_kind: model.source_kind,
         }),
     })
 }
@@ -355,31 +285,15 @@ async fn fetch_guide(
         }
     }
 
-    let processed_data = if include_examples {
-        let linked = guide_example::Entity::find()
-            .filter(guide_example::Column::GuideId.eq(id))
-            .find_also_related(example::Entity)
-            .all(db)
-            .await?;
-
-        let example_pairs: Vec<_> = linked
-            .into_iter()
-            .filter_map(|(join, ex)| ex.map(|e| (join.placeholder_key, e.data)))
-            .collect();
-        stitch_examples(&model.data, &example_pairs)
-    } else {
-        strip_placeholders(&model.data)
-    };
-
     let content = match model.format {
         crate::db::enums::documentation_format::DocumentationFormat::Markdown => {
-            NGLRaw::Markdown(processed_data)
+            NGLRaw::Markdown(model.data)
         }
         crate::db::enums::documentation_format::DocumentationFormat::HTML => {
-            NGLRaw::HTML(processed_data)
+            NGLRaw::HTML(model.data)
         }
         crate::db::enums::documentation_format::DocumentationFormat::PlainText => {
-            NGLRaw::PlainText(processed_data)
+            NGLRaw::PlainText(model.data)
         }
     };
 
@@ -404,28 +318,12 @@ async fn fetch_option(
         .await?
         .ok_or_else(|| DbErr::RecordNotFound(format!("Option {}", id)))?;
 
-    let processed_data = if include_examples {
-        let linked = option_example::Entity::find()
-            .filter(option_example::Column::OptionId.eq(id))
-            .find_also_related(example::Entity)
-            .all(db)
-            .await?;
-
-        let example_pairs: Vec<_> = linked
-            .into_iter()
-            .filter_map(|(join, ex)| ex.map(|e| (join.placeholder_key, e.data)))
-            .collect();
-        stitch_examples(&model.data, &example_pairs)
-    } else {
-        strip_placeholders(&model.data)
-    };
-
     Ok(NGLData {
         data: NGLDataVariant::Option(OptionData {
             name: model.name,
             option_type: model.type_signature,
             default_value: model.default_value,
-            description: Some(processed_data),
+            description: Some(model.data),
             example: None,
         }),
     })
@@ -441,31 +339,11 @@ async fn fetch_package(
         .await?
         .ok_or_else(|| DbErr::RecordNotFound(format!("Package {}", id)))?;
 
-    let processed_description = if let Some(desc) = &model.description {
-        if include_examples {
-            let linked = package_example::Entity::find()
-                .filter(package_example::Column::PackageId.eq(id))
-                .find_also_related(example::Entity)
-                .all(db)
-                .await?;
-
-            let example_pairs: Vec<_> = linked
-                .into_iter()
-                .filter_map(|(join, ex)| ex.map(|e| (join.placeholder_key, e.data)))
-                .collect();
-            Some(stitch_examples(desc, &example_pairs))
-        } else {
-            Some(strip_placeholders(desc))
-        }
-    } else {
-        None
-    };
-
     Ok(NGLData {
         data: NGLDataVariant::Package(PackageData {
             name: model.name,
             version: model.version,
-            description: processed_description,
+            description: model.description,
             homepage: model.homepage,
             license: model.license,
             source_code_url: model.source_code_url,
@@ -485,26 +363,10 @@ async fn fetch_type(
         .await?
         .ok_or_else(|| DbErr::RecordNotFound(format!("Type {}", id)))?;
 
-    let processed_data = if include_examples {
-        let linked = type_example::Entity::find()
-            .filter(type_example::Column::TypeId.eq(id))
-            .find_also_related(example::Entity)
-            .all(db)
-            .await?;
-
-        let example_pairs: Vec<_> = linked
-            .into_iter()
-            .filter_map(|(join, ex)| ex.map(|e| (join.placeholder_key, e.data)))
-            .collect();
-        stitch_examples(&model.data, &example_pairs)
-    } else {
-        strip_placeholders(&model.data)
-    };
-
     Ok(NGLData {
         data: NGLDataVariant::Type(TypeData {
             name: model.name,
-            description: Some(processed_data),
+            description: Some(model.data),
         }),
     })
 }

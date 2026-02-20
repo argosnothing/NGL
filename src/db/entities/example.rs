@@ -14,7 +14,7 @@ pub struct Model {
 
     pub language: Option<Language>,
     pub data: String,
-    pub source_kind: Option<String>,
+    pub source_kind: Option<NGLDataKind>,
     pub source_link: Option<String>,
 }
 
