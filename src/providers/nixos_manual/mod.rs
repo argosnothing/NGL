@@ -10,7 +10,7 @@ use crate::{
         enums::documentation_format::DocumentationFormat,
     },
     providers::{EventChannel, Provider, ProviderEvent, ProviderInformation},
-    utils::{extract_examples_html, fetch_source},
+    utils::{extract_examples_markdown, fetch_source, html_to_markdown},
 };
 
 static URL: &str = "https://nixos.org/manual/nixos/stable/";
@@ -23,7 +23,7 @@ pub struct NixosManual {}
 struct ParsedGuide {
     id: String,
     title: String,
-    content_html: String,
+    content_markdown: String,
     link: String,
     parent_id: Option<String>,
     depth: usize,
@@ -59,7 +59,7 @@ impl Provider for NixosManual {
             id_to_temp.insert(guide.id.clone(), guide.id.clone());
 
             if include_examples {
-                let examples = extract_examples_html(&guide.content_html);
+                let examples = extract_examples_markdown(&guide.content_markdown);
 
                 for example in examples {
                     channel
@@ -82,7 +82,7 @@ impl Provider for NixosManual {
                         provider_name: Set(PROVIDER_NAME.to_owned()),
                         title: Set(guide.title.clone()),
                         format: Set(DocumentationFormat::HTML),
-                        data: Set(guide.content_html.to_owned()),
+                        data: Set(guide.content_markdown.to_owned()),
                         link: Set(guide.link.clone()),
                     }))
                     .await;
@@ -124,7 +124,7 @@ fn parse_manual(html: &str) -> Vec<ParsedGuide> {
 fn parse_guide_element(element: &ElementRef) -> Option<ParsedGuide> {
     let (id, title) = extract_title_and_id(element)?;
 
-    let content_html = extract_own_content(element);
+    let content_markdown = html_to_markdown(&extract_own_content(element));
 
     let link = format!("{}#{}", URL, id);
 
@@ -142,7 +142,7 @@ fn parse_guide_element(element: &ElementRef) -> Option<ParsedGuide> {
     Some(ParsedGuide {
         id,
         title,
-        content_html,
+        content_markdown,
         link,
         parent_id,
         depth,

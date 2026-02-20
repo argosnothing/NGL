@@ -6,6 +6,7 @@ pub struct ExtractedExample {
     pub data: String,
 }
 
+#[allow(unused)]
 pub fn extract_examples_html(content: &str) -> Vec<ExtractedExample> {
     let re =
         Regex::new(r#"<pre[^>]*>\s*<code[^>]*class="([^"]*)"[^>]*>([\s\S]*?)</code>\s*</pre>"#)
