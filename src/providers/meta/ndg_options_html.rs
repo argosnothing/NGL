@@ -1,8 +1,7 @@
-use crate::db::entities::example as example_entity;
-use crate::db::entities::option as option_entity;
+use crate::db::entities::{example, option};
 use crate::db::enums::documentation_format::DocumentationFormat;
 use crate::db::enums::language::Language;
-use crate::providers::{LinkedExample, ProviderEvent, ProviderInformation, EventChannel};
+use crate::providers::{EventChannel, ProviderEvent, ProviderInformation};
 use crate::schema::NGLDataKind;
 use crate::utils::fetch_source;
 use crate::utils::html_to_markdown;
@@ -26,8 +25,7 @@ impl NdgOptionsHtmlProvider {
     async fn parse_content(
         &self,
         channel: &EventChannel,
-        emit_options: bool,
-        emit_examples: bool,
+        kinds: &[NGLDataKind],
     ) -> Result<(), DbErr> {
         let html = fetch_source(&self.info.source)
             .await
@@ -37,40 +35,26 @@ impl NdgOptionsHtmlProvider {
             .map_err(|e| DbErr::Custom(format!("Failed to parse HTML: {}", e)))?;
 
         for opt in options {
-            if emit_options {
-                let mut markdown = opt
-                    .raw_html
-                    .as_ref()
-                    .map(|h| html_to_markdown(h))
-                    .unwrap_or_default();
-
-                let linked_examples: Vec<LinkedExample> = if emit_examples {
-                    opt.examples
-                        .iter()
-                        .enumerate()
-                        .map(|(i, ex)| {
-                            let key = format!("ex{}", i);
-                            let placeholder = format!("{{{{NGL_EX:{}}}}}", key);
-                            markdown = markdown.replace(ex, &placeholder);
-                            LinkedExample {
-                                placeholder_key: key,
-                                model: example_entity::ActiveModel {
-                                    id: NotSet,
-                                    provider_name: Set(self.info.name.clone()),
-                                    language: Set(Some(Language::Nix)),
-                                    data: Set(ex.clone()),
-                                    source_kind: Set(Some(format!("{:?}", NGLDataKind::Option))),
-                                    source_link: Set(None),
-                                },
-                            }
-                        })
-                        .collect()
-                } else {
-                    vec![]
-                };
-
-                if linked_examples.is_empty() {
-                    channel.send(ProviderEvent::Option(option_entity::ActiveModel {
+            let markdown = opt
+                .raw_html
+                .as_ref()
+                .map(|h| html_to_markdown(h))
+                .unwrap_or_default();
+            if kinds.contains(&NGLDataKind::Example) {
+                opt.examples.into_iter().map(|example| {
+                    channel.send(ProviderEvent::Example(example::ActiveModel {
+                        id: NotSet,
+                        provider_name: Set(self.info.name.clone()),
+                        language: Set(Some(Language::Nix)),
+                        data: Set(example),
+                        source_kind: Set(Some(format!("{:?}", NGLDataKind::Option))),
+                        source_link: Set(None),
+                    }));
+                });
+            }
+            if kinds.contains(&NGLDataKind::Option) {
+                channel
+                    .send(ProviderEvent::Option(option::ActiveModel {
                         id: NotSet,
                         provider_name: Set(self.info.name.clone()),
                         name: Set(opt.name.clone()),
@@ -78,21 +62,8 @@ impl NdgOptionsHtmlProvider {
                         default_value: Set(opt.default.clone()),
                         format: Set(DocumentationFormat::Markdown),
                         data: Set(markdown),
-                    })).await;
-                } else {
-                    channel.send(ProviderEvent::OptionWithExamples(
-                        option_entity::ActiveModel {
-                            id: NotSet,
-                            provider_name: Set(self.info.name.clone()),
-                            name: Set(opt.name.clone()),
-                            type_signature: Set(opt.option_type.clone()),
-                            default_value: Set(opt.default.clone()),
-                            format: Set(DocumentationFormat::Markdown),
-                            data: Set(markdown),
-                        },
-                        linked_examples,
-                    )).await;
-                }
+                    }))
+                    .await;
             }
         }
 
@@ -106,15 +77,7 @@ impl ConfigProvider for NdgOptionsHtmlProvider {
     }
 
     async fn sync(&mut self, channel: &EventChannel, kinds: &[NGLDataKind]) -> Result<(), DbErr> {
-        let emit_options =
-            kinds.contains(&NGLDataKind::Option) && self.info.kinds.contains(&NGLDataKind::Option);
-        let emit_examples = kinds.contains(&NGLDataKind::Example)
-            && self.info.kinds.contains(&NGLDataKind::Example);
-
-        if emit_options || emit_examples {
-            self.parse_content(channel, emit_options, emit_examples)
-                .await?;
-        }
+        self.parse_content(channel, kinds).await?;
         Ok(())
     }
 }
