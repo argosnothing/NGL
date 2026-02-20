@@ -2,36 +2,29 @@ use crate::db::enums::language::Language;
 use regex::Regex;
 
 pub struct ExtractedExample {
-    pub placeholder_key: String,
     pub language: Option<Language>,
     pub data: String,
 }
 
-pub fn extract_examples_html(content: &str) -> (String, Vec<ExtractedExample>) {
+pub fn extract_examples_html(content: &str) -> Vec<ExtractedExample> {
     let re =
         Regex::new(r#"<pre[^>]*>\s*<code[^>]*class="([^"]*)"[^>]*>([\s\S]*?)</code>\s*</pre>"#)
             .unwrap();
     let mut examples = Vec::new();
-    let mut counter = 0;
 
-    let result = re.replace_all(content, |caps: &regex::Captures| {
+    re.captures_iter(content).map(|caps| {
         let class_str = caps.get(1).map(|m| m.as_str()).unwrap_or("");
         let code = caps.get(2).map(|m| m.as_str()).unwrap_or("");
-        let key = format!("ex{}", counter);
-        counter += 1;
 
         let language = parse_language_from_class(class_str);
 
         examples.push(ExtractedExample {
-            placeholder_key: key.clone(),
             language,
             data: html_escape::decode_html_entities(code).to_string(),
         });
-
-        format!("{{{{NGL_EX:{}}}}}", key)
     });
 
-    (result.to_string(), examples)
+    examples
 }
 
 fn parse_language_from_class(class_str: &str) -> Option<Language> {
@@ -50,51 +43,24 @@ fn parse_language_from_class(class_str: &str) -> Option<Language> {
     None
 }
 
-/// Pull out code blocks from markdown and return the content with
-/// those codeblocks swapped out for NGL Example Index templates
-/// These `NGL_EX` deliminators are used to in-place restitch examples in
-/// on requests that merge a host type with its example
-pub fn extract_examples_markdown(content: &str) -> (String, Vec<ExtractedExample>) {
+pub fn extract_examples_markdown(content: &str) -> Vec<ExtractedExample> {
     let re = Regex::new(r"```(\w*)\n([\s\S]*?)```").unwrap();
     let mut examples = Vec::new();
-    let mut counter = 0;
 
-    let result = re.replace_all(content, |caps: &regex::Captures| {
-        let lang_str = caps.get(1).map(|m| m.as_str()).unwrap_or("");
-        let code = caps.get(2).map(|m| m.as_str()).unwrap_or("");
-        let key = format!("ex{}", counter);
-        counter += 1;
-
-        let language = match lang_str.to_lowercase().as_str() {
-            "nix" => Some(Language::Nix),
-            _ => None,
-        };
+    re.captures_iter(content).map(|elem| {
+        let lang_str = elem.get(1).map(|m| m.as_str()).unwrap_or("");
+        let code = elem.get(2).map(|m| m.as_str()).unwrap_or("");
 
         examples.push(ExtractedExample {
-            placeholder_key: key.clone(),
-            language,
+            language: match lang_str.to_lowercase().as_str() {
+                "nix" => Some(Language::Nix),
+                _ => None,
+            },
             data: code.to_string(),
         });
-
-        format!("{{{{NGL_EX:{}}}}}", key)
     });
 
-    (result.to_string(), examples)
-}
-
-pub fn stitch_examples(content: &str, examples: &[(String, String)]) -> String {
-    let mut result = content.to_string();
-    for (key, data) in examples {
-        let placeholder = format!("{{{{NGL_EX:{}}}}}", key);
-        result = result.replace(&placeholder, data);
-    }
-    result
-}
-
-pub fn strip_placeholders(content: &str) -> String {
-    static PLACEHOLDER_RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
-    let re = PLACEHOLDER_RE.get_or_init(|| regex::Regex::new(r"\{\{NGL_EX:[^}]+\}\}").unwrap());
-    re.replace_all(content, "").to_string()
+    examples
 }
 
 pub fn html_to_markdown(html: &str) -> String {

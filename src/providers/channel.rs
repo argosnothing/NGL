@@ -66,23 +66,13 @@ impl SyncCounts {
 /// Carrier for event data.
 pub enum ProviderEvent {
     Function(function::ActiveModel),
-    FunctionWithExamples(function::ActiveModel, Vec<LinkedExample>),
     Example(example::ActiveModel),
     Guide(guide::ActiveModel),
-    GuideWithExamples(guide::ActiveModel, Vec<LinkedExample>),
     /// Link a child guide to its parent
     GuideXref(String, String),
     Option(option::ActiveModel),
-    OptionWithExamples(option::ActiveModel, Vec<LinkedExample>),
     Package(package::ActiveModel),
-    PackageWithExamples(package::ActiveModel, Vec<LinkedExample>),
     Type(r#type::ActiveModel),
-    TypeWithExamples(r#type::ActiveModel, Vec<LinkedExample>),
-}
-
-pub struct LinkedExample {
-    pub placeholder_key: String,
-    pub model: example::ActiveModel,
 }
 
 pub struct EventChannel {
@@ -196,101 +186,6 @@ async fn batch_consumer(
                     insert(&db, types.drain(..).collect()).await?;
                     if let Some(ref c) = counts {
                         c.types.fetch_add(count, Ordering::Relaxed);
-                    }
-                }
-            }
-            ProviderEvent::FunctionWithExamples(func_model, linked_examples) => {
-                let func = func_model.insert(&db).await?;
-                if let Some(ref c) = counts {
-                    c.functions.fetch_add(1, Ordering::Relaxed);
-                }
-                for linked in linked_examples {
-                    let ex = linked.model.insert(&db).await?;
-                    function_example::ActiveModel {
-                        function_id: Set(func.id),
-                        example_id: Set(ex.id),
-                        placeholder_key: Set(linked.placeholder_key),
-                    }
-                    .insert(&db)
-                    .await?;
-                    if let Some(ref c) = counts {
-                        c.examples.fetch_add(1, Ordering::Relaxed);
-                    }
-                }
-            }
-            ProviderEvent::GuideWithExamples(guide_model, linked_examples) => {
-                let g = guide_model.insert(&db).await?;
-                if let Some(ref c) = counts {
-                    c.guides.fetch_add(1, Ordering::Relaxed);
-                }
-                for linked in linked_examples {
-                    let ex = linked.model.insert(&db).await?;
-                    guide_example::ActiveModel {
-                        guide_id: Set(g.id),
-                        example_id: Set(ex.id),
-                        placeholder_key: Set(linked.placeholder_key),
-                    }
-                    .insert(&db)
-                    .await?;
-                    if let Some(ref c) = counts {
-                        c.examples.fetch_add(1, Ordering::Relaxed);
-                    }
-                }
-            }
-            ProviderEvent::OptionWithExamples(opt_model, linked_examples) => {
-                let o = opt_model.insert(&db).await?;
-                if let Some(ref c) = counts {
-                    c.options.fetch_add(1, Ordering::Relaxed);
-                }
-                for linked in linked_examples {
-                    let ex = linked.model.insert(&db).await?;
-                    option_example::ActiveModel {
-                        option_id: Set(o.id),
-                        example_id: Set(ex.id),
-                        placeholder_key: Set(linked.placeholder_key),
-                    }
-                    .insert(&db)
-                    .await?;
-                    if let Some(ref c) = counts {
-                        c.examples.fetch_add(1, Ordering::Relaxed);
-                    }
-                }
-            }
-            ProviderEvent::PackageWithExamples(pkg_model, linked_examples) => {
-                let p = pkg_model.insert(&db).await?;
-                if let Some(ref c) = counts {
-                    c.packages.fetch_add(1, Ordering::Relaxed);
-                }
-                for linked in linked_examples {
-                    let ex = linked.model.insert(&db).await?;
-                    package_example::ActiveModel {
-                        package_id: Set(p.id),
-                        example_id: Set(ex.id),
-                        placeholder_key: Set(linked.placeholder_key),
-                    }
-                    .insert(&db)
-                    .await?;
-                    if let Some(ref c) = counts {
-                        c.examples.fetch_add(1, Ordering::Relaxed);
-                    }
-                }
-            }
-            ProviderEvent::TypeWithExamples(type_model, linked_examples) => {
-                let t = type_model.insert(&db).await?;
-                if let Some(ref c) = counts {
-                    c.types.fetch_add(1, Ordering::Relaxed);
-                }
-                for linked in linked_examples {
-                    let ex = linked.model.insert(&db).await?;
-                    type_example::ActiveModel {
-                        type_id: Set(t.id),
-                        example_id: Set(ex.id),
-                        placeholder_key: Set(linked.placeholder_key),
-                    }
-                    .insert(&db)
-                    .await?;
-                    if let Some(ref c) = counts {
-                        c.examples.fetch_add(1, Ordering::Relaxed);
                     }
                 }
             }

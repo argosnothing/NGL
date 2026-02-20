@@ -40,6 +40,7 @@ impl Provider for Noogle {
             .map_err(|e| DbErr::Custom(e.to_string()))?;
 
         let fetch_functions = kinds.contains(&NGLDataKind::Function);
+        let fetch_examples = kinds.contains(&NGLDataKind::Example);
         let upstream_rev = response.upstream_info.rev.clone();
 
         for doc in response.data {
@@ -50,16 +51,35 @@ impl Provider for Noogle {
                 .cloned()
                 .unwrap_or_default();
 
-            if fetch_functions {
-                let source_url = Some(format!("https://noogle.dev/f/{}", doc.meta.path.join("/")));
+            let source_url = Some(format!("https://noogle.dev/f/{}", doc.meta.path.join("/")));
 
-                let source_code_url = doc.meta.attr_position.as_ref().map(|pos| {
-                    format!(
-                        "https://github.com/NixOS/nixpkgs/blob/{}/{}#L{}",
-                        upstream_rev, pos.file, pos.line
-                    )
+            let source_code_url = doc.meta.attr_position.as_ref().map(|pos| {
+                format!(
+                    "https://github.com/NixOS/nixpkgs/blob/{}/{}#L{}",
+                    upstream_rev, pos.file, pos.line
+                )
+            });
+            if fetch_examples {
+                let extracted_examples = extract_examples_markdown(&content);
+                extracted_examples.into_iter().map(|example| {
+                    channel.send(ProviderEvent::Example(example::ActiveModel {
+                        id: NotSet,
+                        provider_name: Set("noogle".to_owned()),
+                        language: Set(example.language),
+                        data: Set(example.data),
+                        source_kind: Set(Some(format!("{:?}", NGLDataKind::Function))),
+                        source_link: Set(if doc.meta.path.is_empty() {
+                            None
+                        } else {
+                            Some(format!(
+                                "https://github.com/NixOS/nixpkgs/blob/master/{}",
+                                doc.meta.path.join("/")
+                            ))
+                        }),
+                    }))
                 });
-
+            }
+            if fetch_functions {
                 let aliases = doc.meta.aliases.as_ref().map(|a| {
                     serde_json::to_string(
                         &a.iter().map(|parts| parts.join(".")).collect::<Vec<_>>(),
@@ -67,62 +87,19 @@ impl Provider for Noogle {
                     .unwrap_or_default()
                 });
 
-                let (processed_content, extracted) = extract_examples_markdown(&content);
-
-                let linked_examples: Vec<LinkedExample> = extracted
-                    .into_iter()
-                    .map(|ex| LinkedExample {
-                        placeholder_key: ex.placeholder_key,
-                        model: example::ActiveModel {
-                            id: NotSet,
-                            provider_name: Set("noogle".to_owned()),
-                            language: Set(ex.language),
-                            data: Set(ex.data),
-                            source_kind: Set(Some(format!("{:?}", NGLDataKind::Function))),
-                            source_link: Set(if doc.meta.path.is_empty() {
-                                None
-                            } else {
-                                Some(format!(
-                                    "https://github.com/NixOS/nixpkgs/blob/master/{}",
-                                    doc.meta.path.join("/")
-                                ))
-                            }),
-                        },
-                    })
-                    .collect();
-
-                if linked_examples.is_empty() {
-                    channel
-                        .send(ProviderEvent::Function(function::ActiveModel {
-                            id: NotSet,
-                            name: Set(doc.meta.title.clone()),
-                            provider_name: Set("noogle".to_owned()),
-                            format: Set(DocumentationFormat::Markdown),
-                            signature: Set(doc.meta.signature.clone()),
-                            data: Set(content),
-                            source_url: Set(source_url),
-                            source_code_url: Set(source_code_url),
-                            aliases: Set(aliases),
-                        }))
-                        .await;
-                } else {
-                    channel
-                        .send(ProviderEvent::FunctionWithExamples(
-                            function::ActiveModel {
-                                id: NotSet,
-                                name: Set(doc.meta.title.clone()),
-                                provider_name: Set("noogle".to_owned()),
-                                format: Set(DocumentationFormat::Markdown),
-                                signature: Set(doc.meta.signature.clone()),
-                                data: Set(processed_content),
-                                source_url: Set(source_url),
-                                source_code_url: Set(source_code_url),
-                                aliases: Set(aliases),
-                            },
-                            linked_examples,
-                        ))
-                        .await;
-                }
+                channel
+                    .send(ProviderEvent::Function(function::ActiveModel {
+                        id: NotSet,
+                        name: Set(doc.meta.title.clone()),
+                        provider_name: Set("noogle".to_owned()),
+                        format: Set(DocumentationFormat::Markdown),
+                        signature: Set(doc.meta.signature.clone()),
+                        data: Set(content),
+                        source_url: Set(source_url),
+                        source_code_url: Set(source_code_url),
+                        aliases: Set(aliases),
+                    }))
+                    .await;
             }
         }
 

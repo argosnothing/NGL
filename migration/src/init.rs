@@ -149,35 +149,6 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(Alias::new("guide_examples"))
-                    .if_not_exists()
-                    .col(integer(GuideExample::GuideId))
-                    .col(integer(GuideExample::ExampleId))
-                    .col(string(GuideExample::PlaceholderKey))
-                    .primary_key(
-                        Index::create()
-                            .col(GuideExample::GuideId)
-                            .col(GuideExample::ExampleId),
-                    )
-                    .foreign_key(
-                        ForeignKey::create()
-                            .name("fk-guide_example-guide")
-                            .from(Alias::new("guide_examples"), GuideExample::GuideId)
-                            .to(Alias::new("guides"), Guide::Id),
-                    )
-                    .foreign_key(
-                        ForeignKey::create()
-                            .name("fk-guide_example-example")
-                            .from(Alias::new("guide_examples"), GuideExample::ExampleId)
-                            .to(Alias::new("examples"), Example::Id),
-                    )
-                    .to_owned(),
-            )
-            .await?;
-
-        manager
-            .create_table(
-                Table::create()
                     .table(Alias::new("options"))
                     .if_not_exists()
                     .col(pk_auto(Option::Id))
@@ -245,122 +216,6 @@ impl MigrationTrait for Migration {
             .await?;
 
         manager
-            .create_table(
-                Table::create()
-                    .table(Alias::new("function_examples"))
-                    .if_not_exists()
-                    .col(integer(FunctionExample::FunctionId))
-                    .col(integer(FunctionExample::ExampleId))
-                    .col(string(FunctionExample::PlaceholderKey))
-                    .primary_key(
-                        Index::create()
-                            .col(FunctionExample::FunctionId)
-                            .col(FunctionExample::ExampleId),
-                    )
-                    .foreign_key(
-                        ForeignKey::create()
-                            .name("fk-function_example-function")
-                            .from(Alias::new("function_examples"), FunctionExample::FunctionId)
-                            .to(Alias::new("functions"), Function::Id),
-                    )
-                    .foreign_key(
-                        ForeignKey::create()
-                            .name("fk-function_example-example")
-                            .from(Alias::new("function_examples"), FunctionExample::ExampleId)
-                            .to(Alias::new("examples"), Example::Id),
-                    )
-                    .to_owned(),
-            )
-            .await?;
-
-        manager
-            .create_table(
-                Table::create()
-                    .table(Alias::new("option_examples"))
-                    .if_not_exists()
-                    .col(integer(OptionExample::OptionId))
-                    .col(integer(OptionExample::ExampleId))
-                    .col(string(OptionExample::PlaceholderKey))
-                    .primary_key(
-                        Index::create()
-                            .col(OptionExample::OptionId)
-                            .col(OptionExample::ExampleId),
-                    )
-                    .foreign_key(
-                        ForeignKey::create()
-                            .name("fk-option_example-option")
-                            .from(Alias::new("option_examples"), OptionExample::OptionId)
-                            .to(Alias::new("options"), Option::Id),
-                    )
-                    .foreign_key(
-                        ForeignKey::create()
-                            .name("fk-option_example-example")
-                            .from(Alias::new("option_examples"), OptionExample::ExampleId)
-                            .to(Alias::new("examples"), Example::Id),
-                    )
-                    .to_owned(),
-            )
-            .await?;
-
-        manager
-            .create_table(
-                Table::create()
-                    .table(Alias::new("package_examples"))
-                    .if_not_exists()
-                    .col(integer(PackageExample::PackageId))
-                    .col(integer(PackageExample::ExampleId))
-                    .col(string(PackageExample::PlaceholderKey))
-                    .primary_key(
-                        Index::create()
-                            .col(PackageExample::PackageId)
-                            .col(PackageExample::ExampleId),
-                    )
-                    .foreign_key(
-                        ForeignKey::create()
-                            .name("fk-package_example-package")
-                            .from(Alias::new("package_examples"), PackageExample::PackageId)
-                            .to(Alias::new("packages"), Package::Id),
-                    )
-                    .foreign_key(
-                        ForeignKey::create()
-                            .name("fk-package_example-example")
-                            .from(Alias::new("package_examples"), PackageExample::ExampleId)
-                            .to(Alias::new("examples"), Example::Id),
-                    )
-                    .to_owned(),
-            )
-            .await?;
-
-        manager
-            .create_table(
-                Table::create()
-                    .table(Alias::new("type_examples"))
-                    .if_not_exists()
-                    .col(integer(TypeExample::TypeId))
-                    .col(integer(TypeExample::ExampleId))
-                    .col(string(TypeExample::PlaceholderKey))
-                    .primary_key(
-                        Index::create()
-                            .col(TypeExample::TypeId)
-                            .col(TypeExample::ExampleId),
-                    )
-                    .foreign_key(
-                        ForeignKey::create()
-                            .name("fk-type_example-type")
-                            .from(Alias::new("type_examples"), TypeExample::TypeId)
-                            .to(Alias::new("types"), Type::Id),
-                    )
-                    .foreign_key(
-                        ForeignKey::create()
-                            .name("fk-type_example-example")
-                            .from(Alias::new("type_examples"), TypeExample::ExampleId)
-                            .to(Alias::new("examples"), Example::Id),
-                    )
-                    .to_owned(),
-            )
-            .await?;
-
-        manager
             .get_connection()
             .execute_unprepared(
                 r#"
@@ -386,15 +241,7 @@ impl MigrationTrait for Migration {
             .await?;
 
         manager
-            .drop_table(Table::drop().table(Alias::new("type_examples")).to_owned())
-            .await?;
-
-        manager
             .drop_table(Table::drop().table(Alias::new("types")).to_owned())
-            .await?;
-
-        manager
-            .drop_table(Table::drop().table(Alias::new("package_examples")).to_owned())
             .await?;
 
         manager
@@ -402,15 +249,15 @@ impl MigrationTrait for Migration {
             .await?;
 
         manager
-            .drop_table(Table::drop().table(Alias::new("option_examples")).to_owned())
+            .drop_table(
+                Table::drop()
+                    .table(Alias::new("option_examples"))
+                    .to_owned(),
+            )
             .await?;
 
         manager
             .drop_table(Table::drop().table(Alias::new("options")).to_owned())
-            .await?;
-
-        manager
-            .drop_table(Table::drop().table(Alias::new("guide_examples")).to_owned())
             .await?;
 
         manager
@@ -419,10 +266,6 @@ impl MigrationTrait for Migration {
 
         manager
             .drop_table(Table::drop().table(Alias::new("guides")).to_owned())
-            .await?;
-
-        manager
-            .drop_table(Table::drop().table(Alias::new("function_examples")).to_owned())
             .await?;
 
         manager
@@ -578,44 +421,4 @@ enum Type {
     Name,
     Format,
     Data,
-}
-
-#[derive(DeriveIden)]
-#[sea_orm(iden = "function_examples")]
-enum FunctionExample {
-    #[allow(unused)]
-    Table,
-    FunctionId,
-    ExampleId,
-    PlaceholderKey,
-}
-
-#[derive(DeriveIden)]
-#[sea_orm(iden = "option_examples")]
-enum OptionExample {
-    #[allow(unused)]
-    Table,
-    OptionId,
-    ExampleId,
-    PlaceholderKey,
-}
-
-#[derive(DeriveIden)]
-#[sea_orm(iden = "package_examples")]
-enum PackageExample {
-    #[allow(unused)]
-    Table,
-    PackageId,
-    ExampleId,
-    PlaceholderKey,
-}
-
-#[derive(DeriveIden)]
-#[sea_orm(iden = "type_examples")]
-enum TypeExample {
-    #[allow(unused)]
-    Table,
-    TypeId,
-    ExampleId,
-    PlaceholderKey,
 }
