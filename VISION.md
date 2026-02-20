@@ -32,12 +32,4 @@ NGL is a pragmatic solution to Nix documentation fragmentation. It's not trying 
 
 ## Extended stuff.
 
-Host `kinds` are simply kinds of documentation that can contain an example code block. More or less anything but an example. 
-
-### NGL Example Stitching
-Examples are a very useful part of documentation in nix. Showing an example's source documentation can be important for context.
-Lets say you make a query for an example use of forgejo, you might also want to see where this example came from. At the same time if you want to find a guide you might also want to see that example exactly how it appears in the original guide. 
-
-Stitching lets NGL do both of these things while avoiding data duplication by allowing providers to send the host `kind` and its `examples` separately, and then on queries optionally "restitching" the examples back into the host `kind` to preserve placement in documentation. 
-
-This adds significant complexity to the code base, and currently requires providers to handle the xref tables through a separate providerEvent for each hostkind example relationship. 
+Guides can have subguides. It's often useful to be able to traverse up and down through related guides, or display a linkable table of contents. Ngl Guide responses should give enough information to construct one of these. 
