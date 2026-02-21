@@ -1,7 +1,12 @@
-use sea_orm::DbErr;
+use html_escape::decode_html_entities;
+use sea_orm::{
+    ActiveValue::{NotSet, Set},
+    DbErr,
+};
 use serde::Deserialize;
 
 use crate::{
+    db::{entities::option, enums::documentation_format::DocumentationFormat::Markdown},
     providers::{
         EventChannel, ProviderInformation,
         meta::{ConfigProvider, TemplateProviderConfig},
@@ -26,7 +31,24 @@ impl NdgSearchOptionProvider {
             .map_err(|e| DbErr::Custom(format!("Failed to fetch source: {}", e)))?;
         let options: Vec<OptionEntry> = serde_json::from_str(&json_str)
             .map_err(|e| DbErr::Custom(format!("Failed to parse options.json: {}", e)))?;
-        println!("{:#?}", &options[..options.len().min(3)]);
+
+        for option_entry in options {
+            if let Some(option) = option_entry.title.strip_prefix("Option: ") {
+                channel
+                    .send(crate::providers::ProviderEvent::Option(
+                        option::ActiveModel {
+                            id: NotSet,
+                            provider_name: Set(self.info.name.clone()),
+                            name: Set(decode_html_entities(&option).into_owned()),
+                            type_signature: NotSet,
+                            default_value: NotSet,
+                            format: Set(Markdown),
+                            data: Set(decode_html_entities(&option_entry.content).into_owned()),
+                        },
+                    ))
+                    .await
+            }
+        }
         return Ok(());
     }
 }
