@@ -1,13 +1,13 @@
 use async_trait::async_trait;
 use chrono::Utc;
 use sea_orm::{ActiveValue::Set, DatabaseConnection, DbErr, EntityTrait};
-use std::sync::Arc;
 
 use crate::{
     NGLDataKind, NGLRequest,
-    cli::progress::SyncProgress,
     db::entities::provider,
-    providers::{EventChannel, ProviderInformation, create_event_channel, sync},
+    providers::{
+        EventChannel, ProviderInformation, channel::StatusEvent, create_event_channel, sync,
+    },
 };
 
 #[async_trait]
@@ -53,7 +53,7 @@ pub trait Provider: Send {
         &mut self,
         db: &DatabaseConnection,
         request: NGLRequest,
-        sync_progress: &SyncProgress,
+        status: tokio::sync::broadcast::Sender<StatusEvent>,
     ) -> Result<bool, DbErr> {
         let requested_kinds = request
             .kinds
@@ -70,9 +70,7 @@ pub trait Provider: Send {
         )
         .await?;
 
-        if kinds_to_sync.is_empty()
-            && info.kinds.iter().any(|pk| requested_kinds.contains(pk))
-        {
+        if kinds_to_sync.is_empty() && info.kinds.iter().any(|pk| requested_kinds.contains(pk)) {
             return Ok(false);
         }
 
@@ -94,15 +92,12 @@ pub trait Provider: Send {
             sync::delete_provider_kind_data(db, kind, &info.name).await?;
         }
 
-        let progress = sync_progress.add_provider(&info.name);
-        let counts = Arc::clone(&progress.counts);
-        let (channel, consumer_handle) = create_event_channel(db.clone(), Some(counts));
+        let (channel, consumer_handle) =
+            create_event_channel(self.get_info().name, db.clone(), status);
 
-        let progress_clone = progress.clone();
         let update_handle = tokio::spawn(async move {
             loop {
                 tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-                progress_clone.update();
             }
         });
 
@@ -113,7 +108,6 @@ pub trait Provider: Send {
             .map_err(|e| DbErr::Custom(format!("Consumer task panicked: {}", e)))??;
 
         update_handle.abort();
-        progress.finish();
 
         // Update cache timestamps
         sync::update_kind_cache(db, &kinds_to_sync, &info.name).await?;

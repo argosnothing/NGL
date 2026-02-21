@@ -7,13 +7,14 @@ use crate::providers::nixpkgs::NixPkgs;
 #[cfg(feature = "noogle")]
 use crate::providers::noogle::Noogle;
 use crate::{
-    cli::progress::SyncProgress,
+    cli::progress::run_progress_ui,
     providers::{Provider, meta::MetaProvider},
     schema::NGLRequest,
 };
 use futures::future::join_all;
 use sea_orm::{DatabaseConnection, DbErr};
 use std::path::PathBuf;
+use tokio::sync::broadcast;
 
 pub struct ProviderRegistry;
 
@@ -64,7 +65,10 @@ impl ProviderRegistry {
             }
         }
 
-        let sync_progress = SyncProgress::new();
+        // broadcaster to send status events to, right now we just have a simple progress tui in term, but
+        // this will work later on when we need to provide status to calling code.
+        let (status_tx, _) = broadcast::channel(1024);
+        tokio::spawn(run_progress_ui(status_tx.subscribe()));
         let sync_futures: Vec<_> = providers
             .into_iter()
             .filter_map(|mut provider| {
@@ -78,10 +82,10 @@ impl ProviderRegistry {
                     Some({
                         let request_clone = request.clone();
                         let db_clone = db.clone();
-                        let progress_clone = sync_progress.clone();
+                        let status_clone = status_tx.clone();
                         async move {
                             let result = provider
-                                .refresh(&db_clone, request_clone, &progress_clone)
+                                .refresh(&db_clone, request_clone, status_clone)
                                 .await;
                             (provider_name, result)
                         }
